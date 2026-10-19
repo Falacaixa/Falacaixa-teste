@@ -210,7 +210,7 @@ if(purchase&&countMatch){
  let tail=s.slice(countMatch.index+countMatch[0].length);
  let marker=tail.search(/\b(?:vencimentos?|vencendo|datas?|com vencimento)\b/);
  if(marker<0)throw Error('Informe as datas de vencimento das parcelas.');
- let dateTail=tail.slice(marker);
+ let dateTail=tail.slice(marker).split(/\b(?:vou receber|receberei|receber|vou pagar|pagarei|pagar)\s+(?:r\$\s*)?\d/)[0];
  let dates=[...dateTail.matchAll(/\b\d{2}\/\d{2}\/\d{4}\b/g)].map(x=>x[0]);
  // Um vencimento inicial + periodicidade mensal: gerar as demais datas sem alterar dados cadastrados.
  // Para datas explicitamente informadas, continuar exigindo a quantidade exata.
@@ -229,6 +229,10 @@ if(purchase&&countMatch){
  let per=tail.match(/\bparcelas?\s+de\s*(?:r\$\s*)?(\d[\d.,]*)/);
  if(per&&Math.abs(cents(per[1])*n-total)>n-1)throw Error('O valor informado por parcela não corresponde ao total da compra.');
  events=installments(total,n,dates);
+ // Movimentos independentes da compra parcelada continuam na mesma simulação.
+ // Não confundir suas datas com os vencimentos das parcelas.
+ const extra=/\b(vou receber|receberei|receber|recebo|vou pagar|pagarei|pagar)\s*(?:r\$\s*)?(\d[\d.,]*)\s*(?:em|no dia|dia)\s*(\d{2}\/\d{2}\/\d{4})/g;
+ for(const m of s.matchAll(extra))events.push({kind:/receb/.test(m[1])?'in':'out',amount:cents(m[2]),date:date(m[3]),label:m[1]});
 }else{
 let re=/\b(pagar|pagarei|pago|vou pagar|receber|receberei|recebo|vou receber)\s*(?:r\$\s*)?(\d[\d.,]*)\s*(?:em|no dia|dia)\s*(\d{2}\/\d{2}\/\d{4})/g;
 for(let m of s.matchAll(re))events.push({kind:/receb/.test(m[1])?'in':'out',amount:cents(m[2]),date:date(m[3]),label:m[1]});
@@ -257,7 +261,7 @@ ask=function(text){
   let html;
   try{html=FC09.answer(raw)||'<p>Não reconheci a simulação independente. Informe saldo inicial, operações e datas.</p>'}
   catch(e){html='<p><b>Não foi possível calcular com segurança.</b> '+esc(e.message)+'</p><p>Nenhuma alteração foi gravada.</p>'}
-  document.getElementById('chat').innerHTML='<div class="notice"><b>Você:</b> '+esc(raw)+'</div><div class="notice answer"><b>FalaCaixa v0.9.1 experimental:</b> '+html+'</div>';
+  document.getElementById('chat').innerHTML='<div class="notice"><b>Você:</b> '+esc(raw)+'</div><div class="notice answer"><b>FalaCaixa v0.9.8 experimental:</b> '+html+'</div>';
   document.getElementById('speech').value='';
 };
 </script>
