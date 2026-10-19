@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#103e33"><title>FalaCaixa v0.9.7 - teste local</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#173e34;background:#f6faf8}*{box-sizing:border-box}body{margin:0}main{max-width:760px;margin:auto;padding:25px 18px 115px}header{display:flex;justify-content:space-between;align-items:center;margin:10px 0 32px}h1{font-size:30px;letter-spacing:-1.4px;margin:0}h1 span{color:#19996e}h2{font-size:25px;margin:0 0 18px}h3{margin:0 0 16px}.muted{color:#788d86}.pill{background:#e1f4e9;border-radius:24px;padding:10px 14px;color:#237c5c;font-size:14px}.card{background:white;border:1px solid #dce9e3;border-radius:25px;padding:23px;margin:16px 0;box-shadow:0 5px 20px #154a3310}.hero{background:#103e33;color:white}.hero .muted{color:#b7d0c7}.big{font-size:44px;font-weight:800;margin:14px 0}.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stats .card{margin:0;padding:18px}.stat{font-size:24px;font-weight:800;margin-top:10px}.red{color:#c2534a}.green{color:#168b63}button{font:inherit;cursor:pointer;border-radius:15px;padding:12px 16px;border:1px solid #cbded5;background:white;color:#173e34}button.primary{background:#188c68;border-color:#188c68;color:white;font-weight:700}button:disabled{opacity:.45}button.small{padding:7px 10px;font-size:13px}input,select,textarea{width:100%;border:1px solid #ccded5;border-radius:14px;padding:13px;font:inherit;color:#173e34;background:white}textarea{min-height:95px}label{display:block;margin:14px 0 7px;font-weight:650}.flex{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.item{border-bottom:1px solid #e5eeea;padding:15px 0}.item:last-child{border:0}.item strong{display:block;margin-bottom:6px}.item small{color:#7c8d86}.item .actions{margin-top:10px}.notice{padding:12px 15px;border-radius:14px;background:#eaf5ef;margin:12px 0;line-height:1.5}.warning{background:#fff3de;color:#77561c}.hidden{display:none!important}nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #dae7df;display:flex;justify-content:center;padding:10px 3px max(12px,env(safe-area-inset-bottom));z-index:5}nav button{border:0;background:transparent;font-size:12px;padding:10px 9px;color:#788d86}nav button.active{color:#168b63;font-weight:800}.section{display:none}.section.active{display:block}canvas{width:100%;height:210px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:9px 4px;border-bottom:1px solid #e4ede8;text-align:left}.right{text-align:right}.overflow{overflow-x:auto}.answer p{margin:6px 0}.answer table{margin:6px 0 12px;background:#fff}.answer .opts{margin-top:10px}#message{position:fixed;top:10px;left:10px;right:10px;z-index:20;background:#173e34;color:white;padding:15px;border-radius:12px;display:none}@media(max-width:380px){.big{font-size:37px}.stats .card{padding:12px}nav button{padding:9px 5px}}
+</style></head><body><div id="message"></div><main><header><div><h1>Fala<span>Caixa</span></h1><div class="muted">Seu financeiro, sem complicação</div></div><div class="pill">Teste v0.9.7</div></header>
+<section id="inicio" class="section active"><div class="card hero"><div class="muted">Saldo atual registrado</div><div class="big" id="saldo">R$ 0,00</div><div class="muted">Saldo inicial + movimentações confirmadas</div></div><div class="stats"><div class="card"><div class="muted">A pagar em 7 dias</div><div class="stat red" id="pagar7"></div></div><div class="card"><div class="muted">A receber em 7 dias</div><div class="stat green" id="receber7"></div></div></div><div class="card"><h3>Fluxo de caixa · 30 dias</h3><canvas id="chart"></canvas><div class="muted">Projeção considera lançamentos pendentes e saldo registrado. Recebimentos previstos não são garantidos.</div></div><div class="card"><h3>Alertas financeiros</h3><div id="alertas"></div></div></section>
+<section id="contas" class="section"><div class="flex" style="justify-content:space-between"><h2>Contas</h2><button class="primary" onclick="openForm()">+ Lançar</button></div><div class="card"><label>Filtrar lançamentos</label><select id="filter" onchange="render()"><option value="todos">Todos</option><option value="pendente">Pendentes</option><option value="concluido">Concluídos</option><option value="despesa">Despesas</option><option value="receita">Receitas</option></select><div id="items"></div></div></section>
+<section id="assistente" class="section"><h2>Converse com seu financeiro</h2><div class="card"><div class="flex" style="justify-content:space-between"><h3>✦ Assistente FalaCaixa</h3><span class="pill">Modo local</span></div><p class="muted">Pergunte sobre seu caixa ou descreva uma movimentação. Confirme os dados antes de gravar.</p><div id="chat" class="notice">Olá! Pergunte, por exemplo: “Quanto tenho para pagar nos próximos 90 dias?”, “Quais contas estão atrasadas?” ou “Qual será meu saldo daqui a 60 dias?”. Também posso preparar o cadastro de uma compra.</div><label>Sua mensagem</label><textarea id="speech" placeholder="Ex.: Comprei 3000 em mercadorias em três parcelas de 1000 vencendo dia 10 de novembro, 10 de dezembro e 10 de janeiro"></textarea><div class="flex" style="margin-top:12px"><button class="primary" onclick="ask()">Enviar mensagem</button><button onclick="listen()">🎙 Falar</button></div><div class="notice warning" id="micnote">No iPhone, caso o botão Falar não funcione, toque no campo e use o microfone do teclado do iOS.</div><div id="draft" class="hidden"></div></div></section>
+<section id="planejar" class="section"><h2>Planejar</h2><div class="card"><h3>Fluxo de caixa por período</h3><label>Horizonte</label><select id="horizon" onchange="render()"><option value="7">7 dias</option><option value="15">15 dias</option><option value="30" selected>30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></select><div id="projection"></div></div><div class="card"><h3>Simule uma despesa</h3><label>Valor da nova despesa (R$)</label><input type="number" id="simval" min="0" step=".01" placeholder="Ex.: 15000"><label>Data do pagamento</label><input type="date" id="simdate"><button class="primary" style="margin-top:14px" onclick="simulate()">Simular impacto</button><p class="muted">A simulação não cria lançamentos.</p><div id="simresult"></div></div><div class="card"><h3>Simule atraso ou antecipação</h3><p class="muted">Mude a data de um lançamento pendente e veja o caixa dia a dia. Nada é gravado.</p><label>Lançamento pendente</label><select id="shiftitem"></select><label>Nova data simulada</label><input type="date" id="shiftdate"><div class="grid2"><div><label>Saldo de partida (opcional)</label><input type="number" id="shiftbal" step=".01" placeholder="Saldo registrado"></div><div><label>Período</label><select id="shifthor"><option value="7">7 dias</option><option value="15">15 dias</option><option value="30" selected>30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></select></div></div><div class="grid2"><div><label>Compra à vista hipotética (opcional)</label><input type="number" id="shiftbuy" min="0" step=".01" placeholder="Ex.: 7000"></div><div><label>Data da compra</label><input type="date" id="shiftbuydate"></div></div><button class="primary" style="margin-top:14px" onclick="simulateShiftForm()">Simular alteração</button><div id="shiftresult"></div></div></section>
+<section id="ajustes" class="section"><h2>Ajustes</h2><div class="card"><label>Saldo inicial (R$)</label><input type="number" id="initial" step=".01"><button class="primary" style="margin-top:12px" onclick="setInitial()">Salvar saldo inicial</button></div><div class="card"><h3>Seus dados</h3><p class="muted">Este protótipo salva dados somente neste navegador. Não há conta, sincronização, backup automático ou integração bancária. Não use como sistema financeiro de produção.</p><div class="flex"><button onclick="exportData()">Exportar backup JSON</button><button onclick="document.getElementById('importFile').click()">Importar backup</button><input class="hidden" type="file" id="importFile" accept=".json,application/json" onchange="importData(event)"></div><button style="margin-top:18px;color:#bd4c45" onclick="clearData()">Apagar dados locais</button></div></section>
+<div id="modal" class="hidden" style="position:fixed;inset:0;z-index:10;background:#0008;overflow:auto;padding:25px 12px"><div class="card" style="max-width:650px;margin:30px auto"><div class="flex" style="justify-content:space-between"><h2 id="formtitle">Adicionar lançamento</h2><button onclick="closeForm()">✕</button></div><div class="grid2"><div><label>Tipo</label><select id="ftype"><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div><label>Valor total (R$)</label><input id="fvalue" type="number" min=".01" step=".01"></div></div><label>Descrição</label><input id="fdesc"><label>Cliente / fornecedor</label><input id="fperson"><div class="grid2"><div><label>Primeiro vencimento</label><input type="date" id="fdate"></div><div><label>Parcelas</label><input type="number" id="fcount" min="1" max="120" value="1"></div></div><label>Categoria</label><select id="fcat"><option>Fornecedores</option><option>Vendas</option><option>Serviços</option><option>Aluguel</option><option>Impostos</option><option>Outros</option></select><label class="flex"><input type="checkbox" id="fpaid" style="width:auto"> Já pago / recebido (somente à vista)</label><div id="review" class="hidden"></div><div class="flex" style="margin-top:15px"><button class="primary" onclick="reviewForm()">Revisar lançamento</button><button onclick="closeForm()">Cancelar</button></div></div></div>
+</main><nav><button data-tab="inicio" class="active" onclick="tab('inicio')">⌂<br>Início</button><button data-tab="contas" onclick="tab('contas')">▤<br>Contas</button><button data-tab="assistente" onclick="tab('assistente')">✦<br>Assistente</button><button data-tab="planejar" onclick="tab('planejar')">▥<br>Planejar</button><button data-tab="ajustes" onclick="ajustes()">⚙<br>Ajustes</button></nav>
+<script>
+// Mesma chave de armazenamento da v0.5: mantém os lançamentos já registrados.
+const KEY='falacaixa_v05', money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n||0),today=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`},addDays=(s,n)=>{let d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return localDate(d)},localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,addMonth=(s,n)=>{let d=new Date(s+'T12:00:00'),day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+n);let last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));return localDate(d)},fmt=s=>s.split('-').reverse().join('/'),uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+let state;try{state=JSON.parse(localStorage.getItem(KEY))||{initial:0,items:[]}}catch(e){state={initial:0,items:[]}};let editId=null,pending=null;
+function save(){localStorage.setItem(KEY,JSON.stringify(state));render()}
+function toast(s){let e=document.getElementById('message');e.textContent=s;e.style.display='block';setTimeout(()=>e.style.display='none',3000)}
+function tab(id){document.querySelectorAll('.section').forEach(e=>e.classList.toggle('active',e.id===id));document.querySelectorAll('nav button').forEach(e=>e.classList.toggle('active',e.dataset.tab===id));render();window.scrollTo(0,0)}
+function ajustes(){document.getElementById('initial').value=state.initial;tab('ajustes')}
+function current(){return state.initial+state.items.filter(x=>x.paid).reduce((a,x)=>a+(x.type==='receita'?x.amount:-x.amount),0)}
+function upcoming(days,type){let end=addDays(today(),days);return state.items.filter(x=>!x.paid&&x.type===type&&x.date>=today()&&x.date<=end)}
+function sum(a){return a.reduce((n,x)=>n+Math.round(Number(x.amount)*100),0)/100}
+function projected(date){return current()+state.items.filter(x=>!x.paid&&x.date<=date).reduce((a,x)=>a+(x.type==='receita'?x.amount:-x.amount),0)}
+function render(){document.getElementById('saldo').textContent=money(current());document.getElementById('pagar7').textContent=money(sum(upcoming(7,'despesa')));document.getElementById('receber7').textContent=money(sum(upcoming(7,'receita')));let filt=document.getElementById('filter').value,items=state.items.filter(x=>filt==='todos'||(filt==='pendente'&&!x.paid)||(filt==='concluido'&&x.paid)||filt===x.type).sort((a,b)=>a.date.localeCompare(b.date));document.getElementById('items').innerHTML=items.length?items.map(x=>`<div class="item"><strong>${esc(x.desc)}</strong><div class="${x.type==='receita'?'green':'red'}" style="font-size:21px;font-weight:750">${x.type==='receita'?'+':'−'} ${money(x.amount)}</div><small>${esc(x.person||'Não informado')} · ${fmt(x.date)}${x.count>1?' · '+x.part+'/'+x.count:''}</small><div class="muted">${x.paid?'Concluído':'Pendente'} · ${esc(x.cat||'Outros')}</div><div class="flex actions"><button class="small" onclick="togglePaid('${x.id}')">${x.paid?'Reabrir':'✓ Baixar'}</button><button class="small" onclick="openForm('${x.id}')">Editar</button><button class="small" onclick="removeItem('${x.id}')">Excluir</button></div></div>`).join(''):'<p class="muted">Nenhum lançamento.</p>';drawChart();fillShiftSelect();let horizon=+document.getElementById('horizon').value,end=addDays(today(),horizon),endVal=projected(end),past=state.items.filter(x=>!x.paid&&x.date<today());document.getElementById('projection').innerHTML=`<p>Saldo registrado: <b>${money(current())}</b></p><p>Despesas previstas: <b class="red">${money(sum(upcoming(horizon,'despesa')))}</b></p><p>Receitas previstas: <b class="green">${money(sum(upcoming(horizon,'receita')))}</b></p><p>Saldo projetado até ${fmt(end)}: <b>${money(endVal)}</b></p><p class="muted">O saldo projetado inclui pendências vencidas, além das contas futuras.</p>`;let lows=[];for(let i=0;i<=90;i++){let d=addDays(today(),i),v=projected(d);if(v<0){lows.push({d,v});break}}document.getElementById('alertas').innerHTML=(past.length?`<div class="notice warning">Há ${past.length} conta(s) vencida(s) e ainda pendente(s), totalizando ${money(sum(past))}.</div>`:'')+(lows.length?`<div class="notice warning">Atenção: seu saldo projetado fica negativo em ${fmt(lows[0].d)} (${money(lows[0].v)}), considerando os lançamentos cadastrados.</div>`:'<div class="notice">Nenhum saldo negativo projetado nos próximos 90 dias com os dados cadastrados.</div>')}
+function drawChart(){let c=document.getElementById('chart'),w=c.clientWidth||300,h=210,ratio=window.devicePixelRatio||1;c.width=w*ratio;c.height=h*ratio;let ctx=c.getContext('2d');ctx.scale(ratio,ratio);ctx.clearRect(0,0,w,h);let vals=Array.from({length:31},(_,i)=>projected(addDays(today(),i))),mn=Math.min(0,...vals),mx=Math.max(0,...vals),range=mx-mn||1,pad=24,y=v=>h-pad-(v-mn)/range*(h-2*pad);ctx.strokeStyle='#e0e9e5';ctx.beginPath();ctx.moveTo(8,y(0));ctx.lineTo(w-8,y(0));ctx.stroke();ctx.strokeStyle='#15966d';ctx.lineWidth=3;ctx.beginPath();vals.forEach((v,i)=>{let x=8+i*(w-16)/30;i?ctx.lineTo(x,y(v)):ctx.moveTo(x,y(v))});ctx.stroke();ctx.fillStyle='#738981';ctx.font='12px system-ui';ctx.fillText('Hoje',8,h-5);ctx.fillText('30 dias',w-55,h-5);ctx.fillText(money(vals[30]),8,14)}
+function togglePaid(id){let x=state.items.find(x=>x.id===id);x.paid=!x.paid;save()}
+function removeItem(id){if(confirm('Excluir esta parcela?')){state.items=state.items.filter(x=>x.id!==id);save()}}
+function openForm(id){editId=id||null;let x=state.items.find(x=>x.id===id);document.getElementById('formtitle').textContent=x?'Editar parcela':'Adicionar lançamento';document.getElementById('ftype').value=x?.type||'despesa';document.getElementById('fvalue').value=x?.amount||'';document.getElementById('fdesc').value=x?.desc||'';document.getElementById('fperson').value=x?.person||'';document.getElementById('fdate').value=x?.date||today();document.getElementById('fcount').value=1;document.getElementById('fcount').disabled=!!x;document.getElementById('fcat').value=x?.cat||'Fornecedores';document.getElementById('fpaid').checked=!!x?.paid;document.getElementById('review').classList.add('hidden');document.getElementById('modal').classList.remove('hidden')}
+function closeForm(){document.getElementById('modal').classList.add('hidden')}
+function formData(){let type=document.getElementById('ftype').value,value=Number(document.getElementById('fvalue').value),desc=document.getElementById('fdesc').value.trim(),person=document.getElementById('fperson').value.trim(),date=document.getElementById('fdate').value,count=+document.getElementById('fcount').value,cat=document.getElementById('fcat').value,paid=document.getElementById('fpaid').checked;if(!(value>0)||!desc||!date||!Number.isInteger(count)||count<1||count>120){toast('Preencha valor, descrição, data e parcelas válidas.');return null}if(paid&&count>1){toast('Para parcelamentos, baixe cada parcela individualmente.');return null}let cents=Math.round(value*100),base=Math.floor(cents/count),rest=cents-base*count,parts=Array.from({length:count},(_,i)=>({id:uid(),type,desc:count>1?desc.slice(0,65)+' — parcela '+(i+1)+'/'+count:desc,person,date:addMonth(date,i),amount:(base+(i<rest?1:0))/100,cat,paid,part:i+1,count}));if(editId){parts[0].id=editId;parts[0].part=state.items.find(x=>x.id===editId).part;parts[0].count=state.items.find(x=>x.id===editId).count}return parts}
+function reviewForm(){let parts=formData();if(!parts)return;pending=parts;let e=document.getElementById('review');e.classList.remove('hidden');e.innerHTML=`<div class="notice"><h3>Confira antes de salvar</h3><b>${parts[0].type==='receita'?'Receita':'Despesa'}:</b> ${esc(document.getElementById('fdesc').value)}<p>Fornecedor/cliente: ${esc(parts[0].person||'Não informado')}</p><p>Total: <b>${money(sum(parts))}</b></p><div class="overflow"><table><tr><th>Parcela</th><th>Vencimento</th><th class="right">Valor</th></tr>${parts.map(x=>`<tr><td>${x.part}/${x.count}</td><td>${fmt(x.date)}</td><td class="right">${money(x.amount)}</td></tr>`).join('')}</table></div><button class="primary" style="margin-top:12px" onclick="commit()">Confirmar e gravar</button></div>`;e.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function commit(){if(!pending)return;if(editId)state.items=state.items.filter(x=>x.id!==editId);state.items.push(...pending);pending=null;save();closeForm();tab('contas');toast('Lançamento salvo!')}
+function esc(s){return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function setInitial(){let v=Number(document.getElementById('initial').value);if(!Number.isFinite(v))return;state.initial=v;save();toast('Saldo inicial atualizado')}
+function exportData(){let blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='falacaixa-backup-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function importData(ev){let f=ev.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!Array.isArray(d.items)||!Number.isFinite(d.initial)||!d.items.every(x=>x.id&&x.date&&Number.isFinite(x.amount)&&['receita','despesa'].includes(x.type)))throw Error();if(confirm('Substituir todos os dados atuais pelo backup?')){state=d;save();toast('Backup importado')}}catch(e){toast('Arquivo de backup inválido')}};r.readAsText(f)}
+function clearData(){if(confirm('Apagar TODOS os lançamentos e saldo inicial deste navegador?')){state={initial:0,items:[]};save()}}
+function simulate(){let v=+document.getElementById('simval').value,d=document.getElementById('simdate').value;if(!(v>0)||!d)return toast('Informe valor e data.');let before=projected(d),after=before-v;document.getElementById('simresult').innerHTML=`<div class="notice ${after<0?'warning':''}">Em ${fmt(d)}, saldo previsto antes: <b>${money(before)}</b>.<br>Após a despesa: <b>${money(after)}</b>.${after<0?'<br>Atenção: projeção negativa.':''}</div>`}
+// ---- Assistente v0.6/v0.8: interpretação de consultas com períodos variáveis ----
+const MONTHS=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'],MONTH_NAMES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'],MONTH_ABBR={jan:'janeiro',fev:'fevereiro',mar:'marco',abr:'abril',mai:'maio',jun:'junho',jul:'julho',ago:'agosto',set:'setembro',out:'outubro',nov:'novembro',dez:'dezembro'};
+const NUMW={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,dezesseis:16,dezessete:17,dezoito:18,dezenove:19,vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100,cento:100,duzentos:200,trezentos:300,quatrocentos:400,quinhentos:500};
+const daysIn=(y,m)=>new Date(y,m,0).getDate(),ymd=(y,m,d)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`,diffDays=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5),plural=(n,s,p)=>n===1?s:p;
+let lastClarify=null,lastOptions=[];
+function prepare(t){let s=t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/(\d)\s*[º°ª]/g,'$1').replace(/\b(\d{1,2})o\s+de\b/g,'$1 de').replace(/\bprimeiro\s+de\b/g,'1 de').replace(/[?!,;:()"“”]/g,' ').replace(/\b(\d{1,2})\s*(?:de\s+|\/)(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\b\.?/g,(m,d,a)=>`${d} de ${MONTH_ABBR[a]}`);let w=Object.keys(NUMW).join('|');s=s.replace(new RegExp(`\\b(?:${w})(?:\\s+e\\s+(?:${w}))*\\b`,'g'),m=>String(m.split(/\s+e\s+/).reduce((n,x)=>n+NUMW[x],0)));return s.replace(/\s+/g,' ').trim()}
+// Troca as datas da frase por marcadores #n# (n = índice em dates). Reutilizado pelo simulador v0.8.
+function tokenizeDates(s,past){let t=today(),ty=+t.slice(0,4),tm=+t.slice(5,7),td=+t.slice(8),dates=[],err=null,M=MONTHS.join('|');const tok=d=>{dates.push(d);return ` #${dates.length-1}# `};
+s=s.replace(new RegExp(`\\b(\\d{1,2})(?:\\s+de\\s+(${M})|\\s*[\\/\\-]\\s*(\\d{1,2}))(?:(?:\\s+de\\s+|\\s+|\\s*[\\/\\-]\\s*)(\\d{4})|\\s*[\\/\\-]\\s*(\\d{2}))?\\b`,'g'),(m0,d,mn,mm,y4,y2)=>{let day=+d,mon=mn?MONTHS.indexOf(mn)+1:+mm,y=y4?+y4:y2?2000+ +y2:null;if(mon<1||mon>12||day<1){err=err||`Não reconheci a data “${m0.trim()}”. Informe no formato 31/12 ou “31 de dezembro”.`;return ' '}if(y===null){y=ty;let c=ymd(ty,mon,day);if(!past&&c<t)y++;if(past&&c>t)y--}if(day>daysIn(y,mon)){err=err||`A data “${m0.trim()}” não existe no calendário. Informe outra data.`;return ' '}return tok(ymd(y,mon,day))});
+s=s.replace(/\bdepois de amanha\b/g,()=>tok(addDays(t,2))).replace(/\bamanha\b/g,()=>tok(addDays(t,1))).replace(/\bhoje\b/g,()=>tok(t)).replace(/\bontem\b/g,()=>tok(addDays(t,-1))).replace(/\b(?:o\s+)?(?:fim|final)\s+(?:do|deste|desse|este|esse)\s+mes\b/g,()=>tok(ymd(ty,tm,daysIn(ty,tm)))).replace(/\b(?:o\s+)?(?:fim|final)\s+(?:do|deste|desse|este|esse)\s+ano\b/g,()=>tok(ymd(ty,12,31))).replace(/\bdia\s+(\d{1,2})\b(?!\s+(?:dias?|semanas?|mes|meses|anos?)\b)/g,(m0,d)=>{d=+d;let y=ty,m=tm;if(d<1||d>31){err=err||`Não existe o dia ${d}.`;return ' '}if(past?d>td:d<td){m+=past?-1:1}for(let i=0;i<12&&d>daysIn(y,m<1?12:m>12?1:m);i++)m+=past?-1:1;if(m>12){m-=12;y++}if(m<1){m+=12;y--}return tok(ymd(y,m,d))});
+return{s,dates,err}}
+// Extrai um único período da frase. past=true quando a consulta é sobre lançamentos já baixados. pre = frase já tokenizada por tokenizeDates.
+function parsePeriod(s,past,pre){let t=today(),ty=+t.slice(0,4),tm=+t.slice(5,7),td=+t.slice(8),out=[],errOpts=null,M=MONTHS.join('|'),tk=pre||tokenizeDates(s,past),dates=tk.dates,err=tk.err;s=tk.s;const D=i=>dates[+i],take=(re,fn)=>{s=s.replace(re,(...a)=>{let p=fn(...a);if(p)out.push(p);return ' '})};
+const monthRange=(m,yy)=>{let y=yy?+yy:ty;if(!yy){if(!past&&m<tm)y++;if(past&&m>tm)y--}return{start:ymd(y,m,1),end:ymd(y,m,daysIn(y,m)),label:`${MONTH_NAMES[m-1]} de ${y}`}};
+take(/\b(?:entre|de|do|desde)\s+(?:o\s+)?(?:dia\s+)?#(\d+)#\s+(?:e|a|ao|ate)\s+(?:o\s+)?(?:dia\s+)?#(\d+)#/g,(m,a,b)=>{let x=D(a),y=D(b);if(x>y)[x,y]=[y,x];return{start:x,end:y,label:`de ${fmt(x)} a ${fmt(y)}`}});
+take(/\bate\s+(?:o\s+|a\s+)?(?:dia\s+|data\s+)?#(\d+)#/g,(m,a)=>({start:past?null:t,end:D(a),label:`até ${fmt(D(a))}`}));
+take(new RegExp(`\\bate\\s+(?:o\\s+)?(?:(?:fim|final)\\s+de\\s+)?(?:(?:o\\s+)?mes\\s+de\\s+)?(${M})(?:\\s+(?:de\\s+)?(\\d{4}))?\\b`,'g'),(m,mn,yy)=>{let r=monthRange(MONTHS.indexOf(mn)+1,yy);return{start:past?null:t,end:r.end,label:`até o fim de ${r.label}`}});
+take(/\b(?:(?:nos|nas|os|as|para os|para as|pelos|pelas|em|dentro de|daqui a|daqui|proximos|proximas|proximo|proxima|ultimos|ultimas|ultimo|ultima)\s+)*(\d+)\s+(dias?|semanas?|mes|meses|anos?)(\s+uteis)?(?:\s+(?:corridos|seguintes|que vem|a frente|passad[oa]s|atras|anteriores))?\b/g,(m,n,u,ut)=>{n=+n;if(ut){err=err||'Ainda não calculo dias úteis. Informe o período em dias corridos (ex.: “próximos 30 dias”) ou uma data final.';return null}if(!n){err=err||'Informe um período maior que zero.';return null}let back=/\b(ultim|passad|atras|anterior)/.test(m),k=back?-1:1,e,lab;if(/^dia/.test(u)){e=addDays(t,k*n);lab=`${n} ${plural(n,'dia','dias')}`}else if(/^semana/.test(u)){e=addDays(t,k*7*n);lab=`${n} ${plural(n,'semana','semanas')} (${7*n} dias)`}else if(/^mes/.test(u)){e=addMonth(t,k*n);lab=`${n} ${plural(n,'mês','meses')}`}else{e=addMonth(t,k*12*n);lab=`${n} ${plural(n,'ano','anos')}`}let fem=/^semana/.test(u);return back?{start:e,end:t,label:`${fem?(n===1?'última':'últimas'):(n===1?'último':'últimos')} ${lab}`}:{start:t,end:e,label:`${fem?(n===1?'próxima':'próximas'):(n===1?'próximo':'próximos')} ${lab}`}});
+let dow=new Date(t+'T12:00:00').getDay(),monday=addDays(t,-((dow+6)%7));
+take(/\b(?:proxima semana|semana que vem)\b/g,()=>({start:addDays(monday,7),end:addDays(monday,13),label:'próxima semana (segunda a domingo)'}));
+take(/\b(?:n?esta|n?essa|desta|dessa)\s+semana\b/g,()=>({start:monday,end:addDays(monday,6),label:'esta semana (até domingo)'}));
+take(/\bsemana passada\b/g,()=>({start:addDays(monday,-7),end:addDays(monday,-1),label:'semana passada'}));
+take(/\b(?:proximo mes|mes que vem)\b/g,()=>{let r=monthRange(tm===12?1:tm+1,tm===12?ty+1:ty);return{...r,label:'próximo mês ('+r.label+')'}});
+take(/\bmes passado\b/g,()=>{let r=monthRange(tm===1?12:tm-1,tm===1?ty-1:ty);return{...r,label:'mês passado ('+r.label+')'}});
+take(/\b(?:(?:n?este|n?esse|deste|desse)\s+mes|mes\s+(?:atual|corrente))\b/g,()=>{let r=monthRange(tm,ty);return{...r,label:'este mês ('+r.label+')'}});
+take(/\b(?:(?:n?este|n?esse|deste|desse)\s+ano|ano\s+(?:atual|corrente))\b/g,()=>({start:ymd(ty,1,1),end:ymd(ty,12,31),label:`este ano (${ty})`}));
+take(/\b(?:proximo ano|ano que vem)\b/g,()=>({start:ymd(ty+1,1,1),end:ymd(ty+1,12,31),label:`próximo ano (${ty+1})`}));
+take(new RegExp(`\\b(${M})(?:\\s+(?:de\\s+)?(\\d{4}))?\\b`,'g'),(m,mn,yy)=>{let r=monthRange(MONTHS.indexOf(mn)+1,yy);return{...r,label:'em '+r.label}});
+take(/#(\d+)#/g,(m,a)=>({start:D(a),end:D(a),label:D(a)===t?'hoje':D(a)===addDays(t,1)?'amanhã':'em '+fmt(D(a))}));
+if(!err&&out.length>1)err=`Encontrei mais de um período na pergunta (${out.map(p=>p.label).join('; ')}). Qual deles devo usar?`;
+if(!err&&!out.length){let n=s.match(/\b(\d+)\b(?!\s+[a-z])/);if(n){err=`Não entendi a que se refere “${n[1]}”. São dias, meses ou uma data?`;errOpts=[`${n[1]} dias`,`${n[1]} meses`]}}
+return{period:out[0]||null,error:err,errOpts}}
+function rangeText(p){return !p.start||p.start===p.end?(p.start?fmt(p.end):'até '+fmt(p.end)):`${fmt(p.start)} a ${fmt(p.end)}`}
+function itemTable(list,o={}){if(!list.length)return '<p class="muted">Nenhuma parcela encontrada.</p>';let t=today();return `<div class="overflow"><table><tr><th>Vencimento</th><th>Descrição</th>${o.late?'<th>Atraso</th>':''}<th class="right">Valor</th></tr>${[...list].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>`<tr><td>${fmt(x.date)}</td><td>${esc(x.desc)}${x.person?'<br><small class="muted">'+esc(x.person)+'</small>':''}</td>${o.late?`<td>${diffDays(x.date,t)} ${plural(diffDays(x.date,t),'dia','dias')}</td>`:''}<td class="right ${o.signed?(x.type==='receita'?'green':'red'):''}">${o.signed?(x.type==='receita'?'+ ':'− '):''}${money(x.amount)}</td></tr>`).join('')}</table></div>`}
+function block(title,list,o){return `<p><b>${title}: ${money(sum(list))}</b> · ${list.length} ${plural(list.length,'parcela','parcelas')}</p>${itemTable(list,o)}`}
+const TYPE_TITLE={despesa:{pend:'A pagar',late:'Despesas vencidas',done:'Pago'},receita:{pend:'A receber',late:'Recebimentos atrasados',done:'Recebido'}};
+const inRange=(x,a,b)=>(!a||x.date>=a)&&(!b||x.date<=b);
+function clarify(msg,options){return{html:`<p>${esc(msg)}</p>`,clarify:true,options:options||[]}}
+function answerQuery(raw){let s=prepare(raw),has=re=>re.test(s),t=today();
+let isD=has(/\b(pagar|pago|pagos|paga|pagas|paguei|pagamos|pagamentos?|despesas?|gastos?|gastei|fornecedor(es)?|boletos?|debitos?|devo|dividas?)\b/),isR=has(/\b(receber|recebo|recebi|recebemos|recebid[oa]s?|receitas?|recebimentos?|entradas?|vendas?|creditos?)\b/),late=has(/\b(atrasad[oa]s?|vencid[oa]s?|em atraso|venceram|venceu)\b/),done=has(/\b(pag[oa]s|paguei|pagou|pagamos|quitad[oa]s?|baixad[oa]s?|concluid[oa]s?|liquidad[oa]s?|recebid[oa]s|recebi|recebemos|recebeu)\b/)&&!has(/\b(pendentes?|em aberto|a vencer|nao pag|nao receb)/),bal=has(/\bsaldo\b/)||(has(/\bcaixa\b/)&&!isD&&!isR),proj=has(/\b(projetad[oa]|projecao|previst[oa]|previsao|sera|vai ficar|vou ter|terei|ficara|futuro|daqui)\b/),general=has(/\b(contas?|lancamentos?|parcelas?|vencem|vence|vencimentos?|compromissos?|movimentac(ao|oes)|pendencias?|pendentes?)\b/);
+let {period,error,errOpts}=parsePeriod(s,done&&!late),items=state.items||[];
+const periodLine=p=>`<p class="muted">Período considerado: ${esc(p.label)} — ${rangeText(p)}.</p>`;
+if(bal){if(error)return clarify(error,errOpts);if(!period){if(proj)return clarify('Para qual data devo projetar o saldo?',['daqui a 7 dias','daqui a 30 dias','daqui a 60 dias','daqui a 90 dias']);return{html:`<p>Seu saldo registrado hoje é <b>${money(current())}</b>.</p><p class="muted">Saldo inicial + lançamentos já baixados. Não é um saldo bancário em tempo real.</p>`}}
+let end=period.end;if(end<t)return{html:`<p>Ainda não consigo calcular saldos de datas passadas, pois o app registra o vencimento e não a data efetiva do pagamento.</p><p>Saldo registrado hoje: <b>${money(current())}</b>.</p>`};if(end===t)return{html:`<p>Seu saldo registrado hoje é <b>${money(current())}</b>.</p>`};
+let pend=items.filter(x=>!x.paid&&x.date<=end),fut=pend.filter(x=>x.date>=t),old=pend.filter(x=>x.date<t),fr=fut.filter(x=>x.type==='receita'),fd=fut.filter(x=>x.type==='despesa'),or=old.filter(x=>x.type==='receita'),od=old.filter(x=>x.type==='despesa'),v=projected(end);
+return{html:`<p>Saldo projetado em <b>${fmt(end)}</b>: <b class="${v<0?'red':'green'}">${money(v)}</b></p><p class="muted">Período considerado: ${esc(period.label)} — de ${fmt(t)} a ${fmt(end)}.</p><div class="overflow"><table><tr><td>Saldo registrado hoje</td><td class="right">${money(current())}</td></tr><tr><td>(+) Receitas pendentes no período · ${fr.length} ${plural(fr.length,'parcela','parcelas')}</td><td class="right green">${money(sum(fr))}</td></tr><tr><td>(−) Despesas pendentes no período · ${fd.length} ${plural(fd.length,'parcela','parcelas')}</td><td class="right red">${money(sum(fd))}</td></tr>${old.length?`<tr><td>(±) Pendências já vencidas consideradas · ${old.length} ${plural(old.length,'parcela','parcelas')}</td><td class="right">${money(sum(or)-sum(od))}</td></tr>`:''}<tr><th>Saldo projetado</th><th class="right">${money(v)}</th></tr></table></div>${pend.length?'<p><b>Movimentações consideradas</b></p>'+itemTable(pend,{signed:true}):''}<p class="muted">Recebimentos previstos não são garantidos.</p>`}}
+if(!isD&&!isR&&!late&&!done&&!general){if(period||error||has(/\bquanto\b/))return clarify('Você quer consultar valores a pagar, a receber ou o saldo projetado?',['a pagar','a receber','saldo projetado']);return null}
+if(late&&done)return clarify('Você quer ver contas vencidas que ainda estão pendentes, ou contas já pagas/recebidas?');
+if(error)return clarify(error,errOpts);
+let types=isD&&!isR?['despesa']:isR&&!isD?['receita']:['despesa','receita'];
+if(late){let p=period,list=items.filter(x=>!x.paid&&x.date<t&&(!p||inRange(x,p.start,p.end)));return{html:`<p>Contas vencidas antes de hoje (${fmt(t)}) e ainda não baixadas.</p>${p?periodLine(p):''}${types.map(k=>block(TYPE_TITLE[k].late,list.filter(x=>x.type===k),{late:true})).join('')}`}}
+if(done){let p=period,list=items.filter(x=>x.paid&&(!p||inRange(x,p.start,p.end)));return{html:`<p>Lançamentos já baixados como pagos/recebidos${p?'':' (todo o histórico)'}.</p>${p?periodLine(p):''}${types.map(k=>block(TYPE_TITLE[k].done,list.filter(x=>x.type===k))).join('')}<p class="muted">O filtro usa a data de vencimento cadastrada.</p>`}}
+if(!period){if(!has(/\b(todas?|todos|total|ao todo|em aberto|pendentes?|tudo|a vencer|futur[oa]s)\b/))return clarify('Para qual período devo consultar?',['nos próximos 7 dias','nos próximos 30 dias','nos próximos 90 dias','até o fim do mês']);period={start:t,end:null,label:'todas as parcelas pendentes a vencer'}}
+if(period.end&&period.end<t){let list=items.filter(x=>!x.paid&&inRange(x,period.start,period.end));return{html:`${periodLine(period)}<p>Esse período já passou. Parcelas dele que continuam pendentes (vencidas):</p>${types.map(k=>block(TYPE_TITLE[k].late,list.filter(x=>x.type===k),{late:true})).join('')}`}}
+let start=period.start&&period.start>t?period.start:t,list=items.filter(x=>!x.paid&&inRange(x,start,period.end)),overdue=items.filter(x=>!x.paid&&x.date<t&&types.includes(x.type)),ptxt=period.end?`${esc(period.label)} — ${start===period.end?fmt(start):fmt(start)+' a '+fmt(period.end)}`:`${esc(period.label)} — a partir de ${fmt(t)}`;
+return{html:`<p class="muted">Período considerado: ${ptxt}.${period.start&&period.start<t?' Datas anteriores a hoje aparecem como vencidas, fora do total.':''}</p>${types.map(k=>block(TYPE_TITLE[k].pend,list.filter(x=>x.type===k))).join('')}${overdue.length?`<div class="notice warning">Fora do total acima: ${overdue.length} ${plural(overdue.length,'parcela vencida','parcelas vencidas')} e ainda ${plural(overdue.length,'pendente','pendentes')}, somando ${money(sum(overdue))}.${itemTable(overdue,{late:true})}</div>`:''}<p class="muted">Somente parcelas pendentes cadastradas no app.</p>`}}
+function isEntry(t,norm){if(/\?/.test(t))return false;if(/^(eu\s+)?(comprei|paguei|gastei|recebi|vendi|lanca|lance|lancar|registre|registrar|registra|cadastre|cadastrar|cadastra|anote|anotar|adicione|adicionar|inclua|incluir|nova despesa|nova receita)\b/.test(norm))return true;if(/\b(quanto|quantos|quantas|quais|qual|a pagar|a receber|vencem|vence|atrasad[oa]s?|vencid[oa]s?|proximos|proximas|ultimos|saldo|projetad[oa]|atualize|versao)\b/.test(norm))return false;return /\b(comprei|paguei|gastei|recebi|vendi|despesa|receita)\b/.test(norm)&&/\d/.test(norm)}
+function followUp(i){if(lastSim&&lastSim.cands[i])return ask({pick:i});if(lastClarify&&lastOptions[i]!==undefined)ask(lastClarify+' '+lastOptions[i])}
+// Resposta digitada a um pedido de esclarecimento da simulação: número da opção ou palavra que identifique um único lançamento.
+function simTypedPick(t){if(!lastSim)return -1;let n=simNorm(t).trim(),c=lastSim.cands;if(n.split(/\s+/).length>6)return -1;if(/^\d$/.test(n)&&c[+n-1])return +n-1;let w=n.split(/\s+/).filter(x=>x.length>=3&&!SIM_STOP.has(x)),hit=c.map((x,i)=>w.some(k=>simNorm(x.desc+' '+(x.person||'')).includes(k))?i:-1).filter(i=>i>=0);return hit.length===1?hit[0]:-1}
+function ask(text){let pick=text&&typeof text==='object'&&lastSim?text.pick:-1,t=(pick>=0?lastSim.labels[pick]:typeof text==='string'?text:document.getElementById('speech').value).trim();if(!t)return;let norm=t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');let html='',r=null;if(pick<0)pick=simTypedPick(t);
+// v0.8: perguntas "e se" (atrasos, antecipações, compras hipotéticas) vão para o simulador, que nunca grava dados.
+if(pick>=0||(!/^(eu\s+)?(comprei|paguei|gastei|recebi|vendi|lanc|registr|cadastr|anot|adicion|inclu)/.test(norm)&&(r=simAttempt(t)))){if(pick>=0)r=pickSim(pick);if(r.clarify&&!lastSim){lastClarify=r.base||t;lastOptions=r.options}else{lastClarify=null;lastOptions=[]}html=r.html}else if(isEntry(t,norm)){lastSim=null;lastClarify=null;let response,match=norm.match(/(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)/),val=match?Number(/,|\.\d{3}/.test(match[1])?match[1].replace(/\./g,'').replace(',','.'):match[1]):0;if(!val){response='Não consegui identificar o valor. Informe a quantia em reais.'}else{let type=/recebi|vendi|receita/.test(norm)?'receita':'despesa',c=1,cm=norm.match(/(?:em\s+)?(\d+|duas|tres|três|quatro|cinco|seis|sete|oito|nove|dez)\s+parcelas?/),words={duas:2,tres:3,'três':3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10};if(cm)c=words[cm[1]]||Number(cm[1]);let dates=[...norm.matchAll(/(?:dia\s*)?(\d{1,2})\s+de\s+(janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/g)],months=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'],dt=today();if(dates.length){let m=months.indexOf(dates[0][2].replace('ç','c'))+1,day=+dates[0][1],yr=+today().slice(0,4);if(m<+today().slice(5,7)||(m===+today().slice(5,7)&&day<+today().slice(8)))yr++;dt=`${yr}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`}if(/hoje/.test(norm))dt=today();openForm();document.getElementById('ftype').value=type;document.getElementById('fvalue').value=val;document.getElementById('fdesc').value=t;document.getElementById('fdate').value=dt;document.getElementById('fcount').value=Math.max(1,Math.min(c,120));document.getElementById('fcat').value=type==='receita'?'Vendas':'Fornecedores';document.getElementById('fpaid').checked=/recebi|paguei/.test(norm)&&c===1;response='Preparei um lançamento para revisão. Confira o valor, a data e as parcelas: a interpretação de datas por texto ainda é limitada.'}html=esc(response)}else{lastSim=null;r=answerQuery(t);let base=t;if(lastClarify&&(!r||r.clarify)){let r2=answerQuery(lastClarify+' '+t);if(r2&&(!r2.clarify||!r)){r=r2;base=lastClarify+' '+t}}if(r&&r.clarify){lastClarify=base;lastOptions=r.options}else{lastClarify=null;lastOptions=[]}html=r?r.html:esc('Posso consultar contas a pagar e a receber por período (ex.: “próximos 90 dias”, “até 31 de dezembro”, “em novembro”, “amanhã”), contas atrasadas, contas recebidas e o saldo atual ou projetado, além de preparar lançamentos.')}document.getElementById('chat').innerHTML=`<div class="notice"><b>Você:</b> ${esc(t)}</div><div class="notice answer"><b>FalaCaixa:</b> ${html}${r&&r.clarify&&r.options.length?`<div class="flex opts">${r.options.map((o,i)=>`<button class="small" onclick="followUp(${i})">${esc(o)}</button>`).join('')}</div>`:''}</div>`;document.getElementById('speech').value=''}
+// ---- Assistente v0.8: simulação de atrasos, antecipações e compras hipotéticas ----
+// Tudo aqui trabalha sobre cópias: nenhum lançamento, saldo ou histórico é alterado ou gravado.
+const SHIFT_STRONG='atrasar|atrase|atrasem|atrasa|atrasou|atrasasse|atrasarem|atrasando|adiar|adiado|adiada|adie|adiem|adia|adiasse|adiando|postergar|postergado|postergada|postergue|prorrogar|prorrogado|prorrogada|prorrogue|antecipar|antecipado|antecipada|antecipe|antecipem|antecipa|antecipasse|antecipando',SHIFT_WEAK='passar|passe|mudar|mude|alterar|altere|transferir|transfira|empurrar|jogar|ficar|fique|ficasse',SHIFT_VERB=SHIFT_STRONG+'|'+SHIFT_WEAK;
+const SIM_STOP=new Set('para pra que com sem dos das nos nas pelo pela meu minha meus minhas seu sua seus suas esse essa este esta isso aquele aquela previsto prevista previstos marcado marcada agendado agendada vencimento vence vencendo recebimento recebimentos receber recebo pagamento pagamentos pagar pago cliente clientes fornecedor fornecedores conta contas valor reais real somente apenas ate dia data hoje amanha caixa saldo atrasar adiar antecipar ainda depois antes quando vez inves'.split(' '));
+let lastSim=null;
+const simNorm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const moneyS=n=>n<0?'−'+money(-n):money(n),dm=s=>fmt(s).slice(0,5);
+// Converte valores monetários em marcadores @n@ (n = índice em vals).
+function tokenizeMoney(s){let vals=[];s=s.replace(/(r\$\s*)?\b(\d{1,3}(?:\.\d{3})+|\d+)(?:c(\d{1,2}))?\b(\s+mil\b)?(\s*reais\b)?/g,(m,rs,n,c,mil,re,off,str)=>{let before=str.slice(0,off),after=str.slice(off+m.length);if(!rs&&/[#~]$/.test(before))return m;if(!rs&&!mil&&/(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(\s+de)?\s*$/.test(before))return m;let v=Number(n.replace(/\./g,'')+(c?'.'+c.padEnd(2,'0'):''))*(mil?1000:1),explicit=rs||mil||re||n.includes('.')||c;if(!explicit&&(v<100||/^\s*(dias?|semanas?|mes|meses|anos?|parcelas?|vezes|x\b|%|horas?)/.test(after)))return m;vals.push(v);return ` @${vals.length-1}@ `});return{s,vals}}
+// Lê a frase e devolve {balance,hypo,shifts,period,error} ou null quando não é uma simulação.
+function parseSimulation(raw){let t=today(),s=prepare(String(raw).replace(/(\d),(\d{1,2})(?!\d)/g,'$1c$2')),tk=tokenizeDates(s,false),D=tk.dates;s=tk.s;
+s=s.replace(new RegExp(`\\b(${SHIFT_STRONG})\\b((?:\\s+\\S+){0,4}?)\\s+(?:em\\s+)?(\\d+)\\s+dias?\\b`,'g'),(m,v,mid,n)=>/\b(proxim\w*|nos|nas|daqui|dentro|periodo|ultim\w*)\b|#/.test(mid)?m:`${v}${mid} ~${n}~ `);
+let mt=tokenizeMoney(s),V=mt.vals;s=mt.s.replace(/\s+/g,' ').trim();
+const clauses=s.split(/\s+(?:e|mas|se|caso|porem|entao|ou)\s+|\s+(?=(?:conseguirei|consigo|conseguiria|consegue|vou conseguir|vai dar|da para|daria|terei|teria|ficarei|ficaria|ficara|fico|o caixa|meu caixa|como fica|como ficaria|qual|quanto|quais|posso|devo|vai faltar|faltara|faltaria|falta|sobra|sobrara)\b)/);
+let balance=null,hypo=[],shifts=[],used=new Set(),error=null,strongNoDate=false;
+const dIn=c=>[...c.matchAll(/#(\d+)#/g)].map(m=>({i:+m[1],at:m.index})),mIn=c=>[...c.matchAll(/@(\d+)@/g)].map(m=>({v:V[+m[1]],at:m.index}));
+for(let c of clauses){let ds=dIn(c),ms=mIn(c),vm=c.match(new RegExp(`\\b(${SHIFT_VERB})\\b`)),strong=vm&&new RegExp(`^(${SHIFT_STRONG})$`).test(vm[1]),so=c.match(/\b(?:somente|so|apenas|soh)\s+(?:(?:em|no dia|dia|para|pra|a partir de|depois de|o dia|no)\s+)*#(\d+)#/),iv=c.match(/#(\d+)#\s+(?:em vez|ao inves)\s+de\s+(?:o\s+)?(?:dia\s+)?#(\d+)#/),newI=null,origI=null,off=null,early=false;
+if(iv){newI=+iv[1];origI=+iv[2]}
+else if(vm){let base=vm.index,paras=[...c.slice(base).matchAll(/\b(previst[oa]s?\s+|marcad[oa]\s+|agendad[oa]\s+|programad[oa]\s+|vencimento\s+|vence\s+|vencendo\s+)?(?:para|pra|ate)\s+(?:o\s+)?(?:dia\s+)?#(\d+)#/g)].filter(m=>!m[1]),om=c.slice(base).match(/~(\d+)~/);if(paras.length)newI=+paras[paras.length-1][2];else if(om&&strong){off=+om[1];early=/^antecip/.test(vm[1])}else if(so)newI=+so[1];else if(strong){let em=c.slice(base).match(/\b(?:em|no dia|dia)\s+#(\d+)#/);if(em)newI=+em[1]}}
+else if(so&&/\b(receb\w*|pag\w*)\b/.test(c))newI=+so[1];
+let isShift=newI!==null||off!==null;
+if(!isShift&&strong&&(ds.length||ms.length)){strongNoDate=true;continue}
+if(isShift){let others=ds.filter(d=>d.i!==newI);if(origI===null&&others.length===1)origI=others[0].i;if(origI===null&&others.length>1){error=error||'Encontrei mais de uma data original possível para o lançamento que muda de data. Informe a data original e a nova data, por exemplo: “de 05/11 para 15/11”.'}
+ds.forEach(d=>used.add(d.i));let txt=c.replace(/[#@~]\d+[#@~]/g,' '),hasF=/\bfornecedor/.test(txt),hasC=/\bcliente/.test(txt),rM=txt.match(/\b(receb\w*|cliente\w*|venda\w*|entrada\w*|receita\w*|credito\w*)\b/),pM=txt.match(/\b(pag\w*|fornecedor\w*|contas?|boletos?|despesas?|aluguel|impostos?|dividas?|debitos?)\b/),type=hasF?'despesa':hasC?'receita':rM&&pM?(rM.index<pM.index?'receita':'despesa'):rM?'receita':pM?'despesa':null;
+shifts.push({type,amount:ms.length?ms[0].v:null,orig:origI!==null?D[origI]:null,newDate:newI!==null?D[newI]:null,offset:off,early,words:txt.split(' ').filter(w=>w.length>=3&&!SIM_STOP.has(w)&&!new RegExp(`^(${SHIFT_VERB})$`).test(w)&&!/^(receb|pag|antecip|atras|adi)/.test(w)&&!/\d/.test(w))});continue}
+let pv=c.match(/\b(comprar|compre|comprando|comprasse|gastar|gaste|gastasse|investir|invista|investisse|adquirir|pagar|pague|pagasse|fazer (?:uma )?compra|fizer (?:uma )?compra|nova despesa|despesa|vender|venda|vendesse)\b/);
+if(pv&&ms.length){let isR=/^vend/.test(pv[1]),cm=c.match(/\b(\d+)\s*(?:x|vezes|parcelas?)\b/),n=cm&&!/\ba vista\b/.test(c)?Math.max(1,Math.min(+cm[1],120)):1,d0=ds.length?D[ds[0].i]:n>1?addMonth(t,1):t,label=isR?'Venda hipotética':/^(compr|fazer|fizer|adquir)/.test(pv[1])?'Compra hipotética':'Despesa hipotética',cents=Math.round(ms[0].v*100),b=Math.floor(cents/n),rest=cents-b*n;ds.forEach(d=>used.add(d.i));for(let k=0;k<n;k++)hypo.push({type:isR?'receita':'despesa',amount:(b+(k<rest?1:0))/100,date:addMonth(d0,k),label:label+(n>1?` ${k+1}/${n}`:'')});continue}
+if(ms.length&&(/\b(caixa|saldo)\b/.test(c)||/\b(tenho|temos|possuo|disponho|tem)\b/.test(c))){balance=ms[0].v;ds.forEach(d=>used.add(d.i))}}
+if(!shifts.length&&!hypo.length&&!strongNoDate&&!(balance!==null&&/\?|\b(conseguirei|consigo|conseguiria|vou conseguir|da para|daria|posso|vai faltar|faltara|como fica|como ficaria|cobre|cobrir|suficiente)\b/.test(raw+' '+s)))return null;
+if(strongNoDate&&!shifts.length)error=error||'Para qual nova data devo simular a mudança do vencimento? Ex.: “atrasar de 05/11 para 15/11” ou “atrasar 10 dias”.';
+let rem=s.replace(/#(\d+)#/g,(m,i)=>used.has(+i)?' ':m).replace(/@\d+@|~\d+~/g,' ').replace(/\s+/g,' ').trim(),pp=parsePeriod(rem,false,{s:rem,dates:D,err:tk.err});
+return{balance,hypo,shifts,period:pp.period,error:error||pp.error,errOpts:pp.errOpts,yesno:!/\b(como|qual|quanto|quais)\b|negativ|\bfalt/.test(s)}}
+// Localiza o lançamento pendente de cada alteração de data. Devolve {resolved} ou {ask} quando falta informação.
+function resolveShifts(sim,items){let taken=new Set(),out=[];for(let k=0;k<sim.shifts.length;k++){let sh=sim.shifts[k],c;const fit=x=>!x.paid&&!taken.has(x.id)&&(sh.amount==null||Math.abs(x.amount-sh.amount)<0.005)&&(!sh.orig||x.date===sh.orig),score=x=>{let txt=simNorm(x.desc+' '+(x.person||''));return sh.words.filter(k=>txt.includes(k)).length};
+// Nome do cliente/fornecedor ou descrição citados têm prioridade sobre o tipo deduzido do verbo ("se o João pagar só em 15/11").
+let named=sh.words.length?items.filter(x=>fit(x)&&score(x)>0):[];if(named.length){let best=Math.max(...named.map(score));named=named.filter(x=>score(x)===best)}
+if(sh.id){c=items.filter(x=>x.id===sh.id)}else if(named.length){c=named}else{c=items.filter(x=>!x.paid&&!taken.has(x.id)&&(!sh.type||x.type===sh.type)&&(sh.amount==null||Math.abs(x.amount-sh.amount)<0.005)&&(!sh.orig||x.date===sh.orig));if(c.length>1&&sh.words.length){let sc=c.map(x=>{let txt=simNorm(x.desc+' '+(x.person||''));return sh.words.filter(k=>txt.includes(k)).length}),best=Math.max(...sc);if(best>0)c=c.filter((x,i)=>sc[i]===best)}}
+let what=(sh.type==='receita'?'recebimento':sh.type==='despesa'?'pagamento':'lançamento')+(sh.amount!=null?' de '+money(sh.amount):'')+(sh.orig?' previsto para '+fmt(sh.orig):'');
+if(!c.length)return{ask:{msg:`Não encontrei ${what} pendente entre os lançamentos cadastrados. Confira o valor, a data original e se ele já não foi baixado na aba Contas.`}};
+if(c.length>1)return{ask:{msg:`Encontrei ${c.length} lançamentos pendentes que combinam com o ${what}. Qual deles devo simular?`,k,cands:c.slice(0,8)}};
+let x=c[0],nd=sh.newDate||addDays(x.date,(sh.early?-1:1)*sh.offset);taken.add(x.id);out.push({id:x.id,item:x,date:nd})}return{resolved:out}}
+// Motor da simulação: fluxo cronológico a partir de start até end, com saldo após cada movimentação.
+function simulateFlow(o){let moved=new Map((o.shifts||[]).map(x=>[x.id,x.date])),ev=[],outside=[];
+(o.items||[]).forEach(x=>{if(x.paid)return;let has=moved.has(x.id),d=has?moved.get(x.id):x.date,isMoved=has&&d!==x.date;if(d>o.end){if(isMoved)outside.push({item:x,date:d});return}ev.push({date:d<o.start?o.start:d,overdue:d<o.start,orig:x.date,moved:isMoved,later:isMoved&&d>x.date,type:x.type,amount:x.amount,desc:x.desc,person:x.person||'',id:x.id})});
+(o.hypo||[]).forEach(h=>{if(h.date>o.end)outside.push({hypo:h,date:h.date});else ev.push({...h,date:h.date<o.start?o.start:h.date,hypo:true})});
+const rank=e=>e.overdue?0:e.type==='receita'?1:2;ev.sort((a,b)=>a.date.localeCompare(b.date)||rank(a)-rank(b));
+let bal=Math.round(o.balance*100),rows=[],days=[{date:o.start,v:bal}];ev.forEach(e=>{bal+=(e.type==='receita'?1:-1)*Math.round(e.amount*100);rows.push({...e,balance:bal/100});let last=days[days.length-1];if(last.date===e.date)last.v=bal;else days.push({date:e.date,v:bal})});
+let min=days.reduce((m,d)=>d.v<m.v?d:m,days[0]),fi=days.findIndex(d=>d.v<0),ri=fi<0?-1:days.findIndex((d,i)=>i>fi&&d.v>=0),again=ri<0?-1:days.findIndex((d,i)=>i>ri&&d.v<0);
+return{start:o.start,end:o.end,startBalance:o.balance,rows,outside,endBalance:bal/100,min:{value:min.v/100,date:min.date},firstNegative:fi<0?null:{date:days[fi].date,value:days[fi].v/100,rows:rows.filter(r=>r.date===days[fi].date)},recovery:ri<0?null:days[ri].date,againNegative:again<0?null:days[again].date}}
+function simRowLabel(r){if(r.hypo)return r.label;let k=r.type==='receita'?'Recebimento':'Pagamento';if(r.overdue)return `${k} vencido em ${fmt(r.orig)}`;if(r.moved)return `${k} ${r.later?'adiado':'antecipado'}`;return k}
+function simConditions(res){return res.map(s=>{let later=s.date>s.item.date;return s.item.type==='receita'?`o cliente ${later?'atrasar':'antecipar'} o recebimento para ${dm(s.date)}`:`você ${later?'adiar':'antecipar'} o pagamento para ${dm(s.date)}`})}
+// Monta a resposta em texto + tabela a partir do resultado de simulateFlow.
+function simReport(f,ctx){let cond=simConditions(ctx.shifts),hyp=ctx.hypo,yes=ctx.yesno!==false,html='';
+let one=hyp.length&&hyp.every(x=>x.type===hyp[0].type&&x.label.split(' ')[0]===hyp[0].label.split(' ')[0]),noun=one?(hyp[0].type==='receita'?'a venda':hyp[0].label.startsWith('Compra')?'a compra':'a despesa')+(hyp.length>1?' parcelada':''):'',lead=cond.length?'Se '+cond.join(' e ')+', ':hyp.length?`Se você fizer ${one?`${noun} de ${money(sum(hyp))}${hyp.length>1?'':' em '+dm(hyp[0].date)}`:'as operações hipotéticas'}, `:'';
+if(f.firstNegative){let fn=f.firstNegative,pays=fn.rows.filter(r=>r.type==='despesa'),why=pays.some(r=>r.hypo)&&!pays.some(r=>!r.hypo&&!r.overdue)?`para cobrir a ${pays.find(r=>r.hypo).label.toLowerCase()} de ${dm(fn.date)}`:pays.some(r=>r.overdue)&&!pays.some(r=>!r.overdue)?'para cobrir as pendências já vencidas':`para pagar ${pays.filter(r=>!r.hypo&&!r.overdue).length>1?'as contas':'a conta'} de ${dm(fn.date)}`,txt=(lead?lead+'faltará':'Faltará')+` ${money(-fn.value)} ${why}.`;
+let span=f.recovery?(addDays(f.recovery,-1)===fn.date?`O caixa ficará negativo em ${dm(fn.date)}, recuperando-se em ${dm(f.recovery)}.`:`O caixa ficará negativo entre ${dm(fn.date)} e ${dm(addDays(f.recovery,-1))}, recuperando-se em ${dm(f.recovery)}.`):`O caixa ficará negativo a partir de ${dm(fn.date)} e não se recupera até ${dm(f.end)}, fim do período analisado.`;
+html+=`<div class="notice warning"><p><b>${yes?'Não.':'Atenção:'}</b> ${esc(txt)} ${esc(span)}</p>${f.againNegative?`<p>O saldo volta a ficar negativo em ${fmt(f.againNegative)}.</p>`:''}${f.endBalance>=0?`<p>Há falta temporária de dinheiro, mesmo com saldo final positivo de <b>${money(f.endBalance)}</b> em ${fmt(f.end)}.</p>`:''}</div>`}
+else html+=`<p><b>${yes?'Sim.':'Sem falta de caixa:'}</b> ${lead?esc(lead.replace(/^Se/,'Mesmo se'))+'o':'O'} caixa não fica negativo no período analisado.</p>`;
+html+=`<p>Menor saldo projetado: <b class="${f.min.value<0?'red':'green'}">${moneyS(f.min.value)}</b> em ${fmt(f.min.date)}.</p><p>Saldo ao final (${fmt(f.end)}): <b>${moneyS(f.endBalance)}</b></p><p class="muted">Período considerado: ${esc(ctx.periodLabel)} — ${fmt(f.start)} a ${fmt(f.end)}.</p>`;
+html+=`<div class="overflow"><table><tr><th>Data</th><th>Movimentação</th><th class="right">Saldo</th></tr><tr><td>${fmt(f.start)}</td><td>${ctx.balanceInformed?'Saldo informado':'Saldo registrado'} ${money(f.startBalance)}</td><td class="right">${moneyS(f.startBalance)}</td></tr>${f.rows.map(r=>`<tr><td>${fmt(r.date)}</td><td>${esc(simRowLabel(r))} <span class="${r.type==='receita'?'green':'red'}">${r.type==='receita'?'+':'−'}${money(r.amount)}</span>${r.hypo?'':`<br><small class="muted">${esc(r.desc)}${r.person?' · '+esc(r.person):''}${r.moved?' · data original '+fmt(r.orig):''}</small>`}</td><td class="right ${r.balance<0?'red':''}">${moneyS(r.balance)}</td></tr>`).join('')}</table></div>`;
+let notes=[];notes.push(ctx.balanceInformed?`Saldo de partida informado por você (${money(f.startBalance)}), no lugar do saldo registrado no app.`:`Saldo de partida: saldo registrado hoje (${money(f.startBalance)}).`);
+ctx.shifts.forEach(s=>notes.push(`${s.item.type==='receita'?'Recebimento':'Pagamento'} “${s.item.desc}”${s.item.person?' ('+s.item.person+')':''} de ${money(s.item.amount)}: ${fmt(s.item.date)} → ${fmt(s.date)} (${s.date>s.item.date?'atraso':'antecipação'} de ${Math.abs(diffDays(s.item.date,s.date))} ${plural(Math.abs(diffDays(s.item.date,s.date)),'dia','dias')}).`));
+f.outside.forEach(o=>notes.push(o.hypo?`${o.hypo.label} em ${fmt(o.date)} fica fora do período analisado.`:`“${o.item.desc}” passa para ${fmt(o.date)}, fora do período analisado: não entra no cálculo.`));
+if(f.rows.some(r=>r.overdue))notes.push('Pendências já vencidas e não baixadas foram consideradas no primeiro dia.');
+if(ctx.baseline)notes.push(ctx.baseline.firstNegative?`Sem a alteração de data, o menor saldo seria ${moneyS(ctx.baseline.min.value)} em ${fmt(ctx.baseline.min.date)}.`:`Sem a alteração de data, o caixa não ficaria negativo (menor saldo ${moneyS(ctx.baseline.min.value)} em ${fmt(ctx.baseline.min.date)}).`);
+return html+`<p class="muted">${notes.map(esc).join('<br>')}</p><p class="muted">Somente simulação: nenhum lançamento, saldo ou histórico foi alterado. Recebimentos previstos não são garantidos.</p>`}
+function runSimulation(sim){let t=today(),items=state.items||[];if(sim.error)return clarify(sim.error,sim.errOpts);
+let p=sim.period||{start:t,end:addDays(t,30),label:'próximos 30 dias (padrão)'};if(!p.end||p.end<t)return clarify('O período da simulação precisa terminar depois de hoje. Ex.: “nos próximos 30 dias”.',['nos próximos 7 dias','nos próximos 30 dias','nos próximos 90 dias']);
+if(sim.hypo.some(h=>h.date<t))return clarify('A data da operação hipotética é anterior a hoje. As simulações começam hoje: informe uma data a partir de hoje.');
+let r=resolveShifts(sim,items);if(r.ask){if(r.ask.cands){let labels=r.ask.cands.map(x=>`${x.desc}${x.person?' · '+x.person:''} · ${money(x.amount)} · ${fmt(x.date)}`);lastSim={sim,k:r.ask.k,cands:r.ask.cands,labels};return{html:`<p>${esc(r.ask.msg)}</p>`,clarify:true,options:labels}}return clarify(r.ask.msg)}
+let bad=r.resolved.find(s=>s.date<t);if(bad)return clarify(`A nova data simulada (${fmt(bad.date)}) é anterior a hoje. Informe uma data a partir de ${fmt(t)}.`);
+let o={items,start:t,end:p.end,balance:sim.balance!==null?sim.balance:current(),hypo:sim.hypo,shifts:r.resolved.map(s=>({id:s.id,date:s.date}))},f=simulateFlow(o);
+return{html:simReport(f,{shifts:r.resolved,hypo:sim.hypo,balanceInformed:sim.balance!==null,periodLabel:p.label,yesno:sim.yesno,baseline:r.resolved.length?simulateFlow({...o,shifts:[]}):null}),flow:f}}
+function answerSimulation(raw){let sim=parseSimulation(raw);if(!sim)return null;lastSim=null;return runSimulation(sim)}
+// Tenta a frase sozinha e, se houver esclarecimento pendente, combinada com a pergunta anterior.
+function simAttempt(t){let r=answerSimulation(t);if(lastClarify&&(!r||r.clarify)){let base=lastClarify+' '+t,r2=answerSimulation(base);if(r2&&(!r2.clarify||!r)){r2.base=base;return r2}}return r}
+function pickSim(i){if(!lastSim||!lastSim.cands[i])return null;let {sim,k,cands}=lastSim,s2={...sim,shifts:sim.shifts.map((s,j)=>j===k?{...s,id:cands[i].id}:s)};lastSim=null;return runSimulation(s2)}
+// Planejar: simulação de alteração de vencimento via formulário.
+function fillShiftSelect(){let e=document.getElementById('shiftitem');if(!e)return;let v=e.value,list=state.items.filter(x=>!x.paid).sort((a,b)=>a.date.localeCompare(b.date));e.innerHTML=list.length?list.map(x=>`<option value="${x.id}">${fmt(x.date)} · ${x.type==='receita'?'+':'−'}${money(x.amount)} · ${esc(x.desc)}</option>`).join(''):'<option value="">Nenhum lançamento pendente</option>';if(list.some(x=>x.id===v))e.value=v}
+function simulateShiftForm(){let id=document.getElementById('shiftitem').value,nd=document.getElementById('shiftdate').value,bv=document.getElementById('shiftbal').value,buy=+document.getElementById('shiftbuy').value,bd=document.getElementById('shiftbuydate').value||today(),t=today(),x=state.items.find(x=>x.id===id&&!x.paid),out=document.getElementById('shiftresult');if(!x||!nd)return toast('Escolha um lançamento pendente e a nova data.');if(nd<t||bd<t)return toast('As datas simuladas devem ser a partir de hoje.');if(bv!==''&&!Number.isFinite(+bv))return toast('Saldo de partida inválido.');
+let hor=+document.getElementById('shifthor').value,hypo=buy>0?[{type:'despesa',amount:Math.round(buy*100)/100,date:bd,label:'Compra hipotética'}]:[],res=[{id:x.id,item:x,date:nd}],o={items:state.items,start:t,end:addDays(t,hor),balance:bv!==''?+bv:current(),hypo,shifts:[{id:x.id,date:nd}]};
+out.innerHTML=`<div class="notice answer">${simReport(simulateFlow(o),{shifts:res,hypo,balanceInformed:bv!=='',periodLabel:`próximos ${hor} dias`,yesno:true,baseline:simulateFlow({...o,shifts:[]})})}</div>`}
+function listen(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('Reconhecimento de voz indisponível neste navegador. Use o microfone do teclado do iPhone.');return}try{let r=new SR();r.lang='pt-BR';r.interimResults=false;r.maxAlternatives=1;r.onresult=e=>{document.getElementById('speech').value=e.results[0][0].transcript;toast('Texto reconhecido. Confira e envie.')};r.onerror=e=>toast('Microfone indisponível: '+e.error+'. Tente o ditado do teclado.');r.start()}catch(e){toast('Não foi possível iniciar o microfone. Use o ditado do teclado.')}}
+document.getElementById('simdate').value=addDays(today(),7);document.getElementById('shiftbuydate').value=today();window.addEventListener('resize',drawChart);render();
+</script><script>
+/* FalaCaixa v0.9 - núcleo experimental, isolado e sem persistência */
+const FC09=(()=>{
+const cents=s=>{let t=String(s).replace(/R\$\s*/gi,'').trim().replace(/[.,]$/,'');if(/^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(t))t=t.replace(/\./g,'').replace(',','.');else if(/^\d+(?:,\d{1,2})?$/.test(t))t=t.replace(',','.');else if(!/^\d+(?:\.\d{1,2})?$/.test(t))throw Error('Valor monetário inválido: '+s);let [a,b='']=t.split('.');let n=Number(a)*100+Number(b.padEnd(2,'0'));if(!Number.isSafeInteger(n))throw Error('Valor fora do limite seguro');return n};
+const date=s=>{let m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);if(!m)throw Error('Data inválida: '+s);let y=+m[3],mo=+m[2],d=+m[1],max=new Date(Date.UTC(y,mo,0)).getUTCDate();if(y<1900||y>2200||mo<1||mo>12||d<1||d>max)throw Error('Data inexistente: '+s);return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`};
+const dateBR=s=>s.split('-').reverse().join('/');
+const fmt=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n/100);
+function flow(start,events){let bal=start,rows=[],min=start,minDate=null;for(let e of [...events].sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==='out'?-1:1))){bal+=e.kind==='in'?e.amount:-e.amount;rows.push({...e,balance:bal});if(bal<min){min=bal;minDate=e.date}}return{rows,final:bal,min,minDate,firstDeficit:rows.find(r=>r.balance<0)||null}}
+function installments(total,n,dates){if(!Number.isInteger(n)||n<1||n>120||dates.length!==n)throw Error('Quantidade de parcelas ou vencimentos inválidos');let base=Math.floor(total/n),rem=total%n;return dates.map((d,i)=>({date:date(d),kind:'out',amount:base+(i<rem?1:0),label:`Parcela ${i+1}/${n}`}))}
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function parse(raw){
+let s=norm(raw);
+if(!/\b(hipotetic\w*|simulac\w*|simule|simular|sem (?:utilizar|usar|incluir|considerar) (?:minhas? )?contas cadastradas|independente das contas|considere apenas|considere somente|somente essas movimentacoes|apenas esse cenario)\b/.test(s))return null;
+if(/\b(atras\w*|adiar|antecip\w*|posterg\w*|mudar vencimento)\b/.test(s))throw Error('Alterações de vencimento exigem identificação do lançamento.');
+let b=s.match(/\b(?:tenho|comeco com|inicio com)\s*(?:r\$\s*)?(\d[\d.,]*)\s*(?:de\s+)?(?:saldo inicial|no caixa|em caixa)/)
+ ||s.match(/\b(?:saldo inicial|saldo de partida|meu saldo inicial)\s*(?:e|de|sera de|:)?\s*(?:r\$\s*)?(\d[\d.,]*)/)
+ ||s.match(/\b(?:tenho|comeco com|inicio com)\s*(?:r\$\s*)(\d[\d.,]*)/);
+if(!b)throw Error('Informe claramente o saldo inicial: Tenho R$ 10.000 de saldo inicial.');
+let initial=cents(b[1]),events=[];
+let purchase=s.match(/\b(?:vou comprar|comprar|compra de|comprei|farei uma compra de)\s*(?:r\$\s*)?(\d[\d.,]*)/);
+let countMatch=s.match(/\b(?:dividid[oa]s?\s+em|em)\s*(\d+|tres|duas|dois|quatro|cinco|seis|sete|oito|nove|dez)\s+parcelas?\b/);
+if(purchase&&countMatch){
+ let n=({tres:3,duas:2,dois:2,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10})[countMatch[1]]||Number(countMatch[1]);
+ let tail=s.slice(countMatch.index+countMatch[0].length);
+ let marker=tail.search(/\b(?:vencimentos?|vencendo|datas?|com vencimento)\b/);
+ if(marker<0)throw Error('Informe as datas de vencimento das parcelas.');
+ let dateTail=tail.slice(marker);
+ let dates=[...dateTail.matchAll(/\b\d{2}\/\d{2}\/\d{4}\b/g)].map(x=>x[0]);
+ // Um vencimento inicial + periodicidade mensal: gerar as demais datas sem alterar dados cadastrados.
+ // Para datas explicitamente informadas, continuar exigindo a quantidade exata.
+ if(dates.length===1 && /\b(?:parcelas? mensais|mensalmente|a cada mes|todo mes)\b/.test(s)){
+   const first=date(dates[0]);
+   const [year,month,day]=first.split('-').map(Number);
+   dates=Array.from({length:n},(_,i)=>{
+     const absoluteMonth=year*12+(month-1)+i;
+     const y=Math.floor(absoluteMonth/12),m=absoluteMonth%12+1;
+     const last=new Date(Date.UTC(y,m,0)).getUTCDate();
+     return `${String(Math.min(day,last)).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+   });
+ }
+ if(dates.length!==n)throw Error('A quantidade de vencimentos não corresponde ao número de parcelas.');
+ let total=cents(purchase[1]);
+ let per=tail.match(/\bparcelas?\s+de\s*(?:r\$\s*)?(\d[\d.,]*)/);
+ if(per&&Math.abs(cents(per[1])*n-total)>n-1)throw Error('O valor informado por parcela não corresponde ao total da compra.');
+ events=installments(total,n,dates);
+}else{
+let re=/\b(pagar|pagarei|pago|vou pagar|receber|receberei|recebo|vou receber)\s*(?:r\$\s*)?(\d[\d.,]*)\s*(?:em|no dia|dia)\s*(\d{2}\/\d{2}\/\d{4})/g;
+for(let m of s.matchAll(re))events.push({kind:/receb/.test(m[1])?'in':'out',amount:cents(m[2]),date:date(m[3]),label:m[1]});
+if(!events.length&&purchase){let dt=(s.match(/\b(?:em|dia)\s*(\d{2}\/\d{2}\/\d{4})/)||[])[1];events.push({kind:'out',amount:cents(purchase[1]),date:dt?date(dt):'0000-00-00',label:'Compra à vista'});}
+}
+if(!events.length)throw Error('Não identifiquei movimentações suficientes para calcular.');
+let end=(s.match(/(?:saldo em|saldo no dia|qual (?:sera )?meu saldo em)\s*(\d{2}\/\d{2}\/\d{4})/)||[])[1];
+let asOf=end?date(end):null;
+if(asOf)events=events.filter(e=>e.date<=asOf);
+return{initial,events,asOf};
+}
+function answer(raw){let p=parse(raw);if(!p)return null;let f=flow(p.initial,p.events);let rows=f.rows.map(r=>`<tr><td>${r.date==='0000-00-00'?'Imediato':dateBR(r.date)}</td><td>${r.kind==='in'?'+':'−'} ${fmt(r.amount)}</td><td>${fmt(r.balance)}</td></tr>`).join('');return `<p><b>${f.firstDeficit?'Não há caixa suficiente em todas as datas.':'Não há saldo negativo neste cenário.'}</b></p><p>Saldo inicial: <b>${fmt(p.initial)}</b></p><p>Menor saldo: <b>${fmt(f.min)}</b>${f.minDate?' em '+dateBR(f.minDate):' (saldo inicial)'}</p><p>Saldo final${p.asOf?' em '+dateBR(p.asOf):''}: <b>${fmt(f.final)}</b></p><div class="overflow"><table><tr><th>Data</th><th>Movimento</th><th>Saldo</th></tr>${rows}</table></div><p class="muted">Cenário independente. Nenhuma conta cadastrada foi utilizada e nenhum dado foi gravado. Valores de recebimento são apenas previstos.</p>`}
+return{cents,date,flow,installments,parse,answer,fmt};})();
+
+</script>
+
+<script>
+/* v0.9: intercepta exclusivamente cenários hipotéticos independentes. */
+const ask08=ask;
+ask=function(text){
+  if(typeof text==='object')return ask08(text);
+  const raw=typeof text==='string'?text:document.getElementById('speech').value;
+  const normalized=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const isolated=/(?:sem utilizar contas cadastradas|sem usar contas cadastradas|sem incluir contas cadastradas|sem considerar (?:minhas? )?contas cadastradas|independente das contas|considere apenas|considere somente|somente essas movimentacoes|apenas esse cenario)/.test(normalized);
+  if(!isolated)return ask08(text);
+  let html;
+  try{html=FC09.answer(raw)||'<p>Não reconheci a simulação independente. Informe saldo inicial, operações e datas.</p>'}
+  catch(e){html='<p><b>Não foi possível calcular com segurança.</b> '+esc(e.message)+'</p><p>Nenhuma alteração foi gravada.</p>'}
+  document.getElementById('chat').innerHTML='<div class="notice"><b>Você:</b> '+esc(raw)+'</div><div class="notice answer"><b>FalaCaixa v0.9.1 experimental:</b> '+html+'</div>';
+  document.getElementById('speech').value='';
+};
+</script>
+<script>
+/* v0.9.2: consultas de contas cadastradas, sem duplicar valores narrados. */
+(function(){
+const previousAsk=ask;
+function norm092(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function query092(raw){
+ const n=norm092(raw);
+ const registered=/(?:somente|apenas|so|exclusivamente)\s+(?:(?:as|os|minhas|meus)\s+)?(?:contas|lancamentos|movimentacoes)\s+cadastrad[oa]s?|considerando\s+(?:somente|apenas|so)\s+(?:(?:as|os|minhas|meus)\s+)?(?:contas|lancamentos|movimentacoes)\s+cadastrad[oa]s?|sem\s+(?:adicionar|incluir|criar)\s+(?:novos?\s+)?lancamentos?|com\s+base\s+(?:somente|apenas)\s+(?:nas|nos|em)\s+(?:contas|lancamentos)\s+cadastrad[oa]s?/.test(n);
+ if(!registered)return null;
+ if(/\b(atrasar|adiar|antecipar|mudar|alterar|transferir)\b/.test(n))return {error:'Para alterar vencimentos, utilize a simulação de atraso ou antecipação. Esta consulta não altera datas.'};
+ const dates=[...n.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g)].map(m=>({raw:m[0],date:ymd(+m[3],+m[2],+m[1]),pos:m.index}));
+ for(const d of dates){const [y,mo,day]=d.date.split('-').map(Number);if(mo<1||mo>12||day<1||day>daysIn(y,mo))return{error:'Data inválida: '+d.raw}}
+ const target=n.match(/(?:quanto\s+(?:terei|vou ter|sera|fica)|saldo|caixa)\s+(?:(?:projetado|final|disponivel|ficara|vou ter|terei|sera|no|em|ate|dia|ao|do|de)\s+){0,7}(\d{1,2}\/\d{1,2}\/\d{4})/);
+ const explicit=n.match(/(?:\b(?:em|no dia|ate|para)\s+)(\d{1,2}\/\d{1,2}\/\d{4})\s*\??\s*$/);
+ let end=target?dates.find(d=>d.raw===target[1])?.date:explicit?dates.find(d=>d.raw===explicit[1])?.date:null;
+ if(!end&&dates.length)end=dates[dates.length-1].date;
+ if(!end)return {error:'Informe a data do saldo desejado, por exemplo: “Quanto terei de saldo em 26/11/2026, considerando somente minhas contas cadastradas?”'};
+ if(end<today())return {error:'Esta versão não reconstrói saldos históricos de datas anteriores a hoje, pois não registra a data efetiva de cada baixa.'};
+ const pending=(state.items||[]).filter(x=>!x.paid&&x.date<=end).sort((a,b)=>a.date.localeCompare(b.date));
+ const start=Math.round(current()*100);
+ let balance=start,min=start,minDate=today(),firstNegative=null;
+ const rows=[];
+ for(const x of pending){const amount=Math.round(Number(x.amount)*100);balance+=(x.type==='receita'?amount:-amount);if(balance<min){min=balance;minDate=x.date}if(balance<0&&!firstNegative)firstNegative=x.date;rows.push({x,balance});}
+ const receipts=pending.filter(x=>x.type==='receita'),expenses=pending.filter(x=>x.type==='despesa');
+ const moneyC=c=>money(c/100);
+ const total=a=>a.reduce((v,x)=>v+Math.round(Number(x.amount)*100),0);
+ let html=`<p><b>Consulta exclusiva das contas cadastradas.</b> Os valores mencionados na pergunta não foram adicionados novamente.</p><p>Saldo registrado de partida: <b>${moneyC(start)}</b></p><p>Recebimentos pendentes até ${fmt(end)}: <b class="green">+ ${moneyC(total(receipts))}</b> (${receipts.length})</p><p>Pagamentos pendentes até ${fmt(end)}: <b class="red">− ${moneyC(total(expenses))}</b> (${expenses.length})</p><p>Saldo projetado em ${fmt(end)}: <b>${moneyC(balance)}</b></p><p>Menor saldo projetado: <b>${moneyC(min)}</b> em ${fmt(minDate)}.</p>`;
+ if(firstNegative)html+=`<div class="notice warning">Atenção: há falta de caixa a partir de ${fmt(firstNegative)} no fluxo calculado.</div>`;
+ html+=`<div class="overflow"><table><tr><th>Vencimento</th><th>Conta cadastrada</th><th class="right">Saldo</th></tr>${rows.map(r=>`<tr><td>${fmt(r.x.date)}</td><td>${esc(r.x.desc)} (${r.x.type==='receita'?'+':'−'} ${money(r.x.amount)})</td><td class="right">${moneyC(r.balance)}</td></tr>`).join('')}</table></div>`;
+ html+='<p class="muted">Movimentações já baixadas estão refletidas no saldo registrado e não são somadas novamente. Pendências vencidas ainda abertas entram na projeção. Nenhum lançamento foi criado, editado ou gravado.</p>';
+ return{html};
+}
+ask=function(text){
+ if(typeof text==='object')return previousAsk(text);
+ const raw=typeof text==='string'?text:document.getElementById('speech').value;
+ const result=query092(raw);
+ if(!result)return previousAsk(text);
+ document.getElementById('chat').innerHTML='<div class="notice"><b>Você:</b> '+esc(raw)+'</div><div class="notice answer"><b>FalaCaixa v0.9.2:</b> '+(result.error?'<p>'+esc(result.error)+'</p>':result.html)+'</div>';
+ document.getElementById('speech').value='';
+};
+window.FC092={query:query092};
+})();
+</script>
+<script>
+/* v0.9.3: consulta contextual de capacidade de pagar uma conta JA cadastrada.
+   Apenas leitura. Nao modifica estado, armazenamento, vencimentos ou baixas. */
+(function(){
+const priorAsk093=ask;
+const normalize093=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const cents093=n=>Math.round(Number(n)*100);
+const format093=n=>money(n/100);
+function query093(raw){
+ const n=normalize093(raw);
+ const question=/\b(consigo|conseguirei|posso|poderei|tenho|terei|havera|vai|vou|da para|sera|sobra|sobrara|sobrar|suficiente|cobrir|pagar|pagamento|falta|faltara|negativo)\b/.test(n);
+ const reference=/\b(conta|boleto|fatura|parcela|despesa|pagamento)\b/.test(n)&&/\b(cadastrad[ao]s?|registrad[ao]s?|ja lancad[ao]s?|ja existe|essa|esta|desse|dessa|deste|desta|minha|meu|nenhum novo lancamento|nao crie|sem criar|sem lancar|sem duplicar)\b/.test(n);
+ const payment=/\b(pagar|pagamento|conta|boleto|fatura|parcela|despesa|fornecedor)\b/.test(n);
+ const independent=/\b(sem considerar (?:minhas? )?contas cadastradas|sem utilizar contas cadastradas|sem usar contas cadastradas|cenario independente|apenas esse cenario|somente essas movimentacoes)\b/.test(n);
+ if(!question||!reference||!payment||independent)return null;
+ if(/\b(adiar|atrasar|antecipar|mudar|alterar|transferir|reagendar)\b/.test(n))return null;
+ const mentions=[...n.matchAll(/(?:r\$\s*)(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/g)].map(m=>m[1]);
+ const amounts=[];
+ for(const value of mentions){try{amounts.push(FC09.cents(value))}catch(e){return {error:'Não consegui interpretar o valor monetário mencionado.'}}}
+ const rawDates=[...n.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g)].map(m=>m[0]);
+ const dates=[];
+ for(const d of rawDates){const [day,mo,year]=d.split('/').map(Number),y=ymd(year,mo,day);if(mo<1||mo>12||day<1||day>daysIn(year,mo))return{error:'Data inválida: '+d};dates.push(y)}
+ const candidates=(state.items||[]).filter(x=>!x.paid&&x.type==='despesa');
+ let matches=candidates;
+ if(amounts.length)matches=matches.filter(x=>amounts.includes(cents093(x.amount)));
+ if(dates.length)matches=matches.filter(x=>dates.includes(x.date));
+ if(!matches.length)return{error:'Não encontrei uma despesa pendente cadastrada que corresponda ao valor e à data informados. Confira a aba Contas; não criei nenhum lançamento.'};
+ if(matches.length>1)return{error:'Encontrei '+matches.length+' despesas pendentes que combinam com a pergunta. Informe o valor e a data exata do vencimento para identificar uma única conta.'};
+ const target=matches[0];
+ const end=target.date;
+ if(end<today())return{error:'A conta está vencida. Esta versão não reconstrói com segurança o saldo histórico antes de hoje. Confira a situação da conta na aba Contas.'};
+ const pending=(state.items||[]).filter(x=>!x.paid&&x.date<=end).slice().sort((a,b)=>a.date.localeCompare(b.date)|| (a.type==='despesa'?-1:1));
+ let balance=cents093(current()),min=balance,minDate=today(),firstNegative=null,before=null,after=null;
+ const rows=[];
+ for(const x of pending){if(x.id===target.id)before=balance;balance+=(x.type==='receita'?1:-1)*cents093(x.amount);if(x.id===target.id)after=balance;if(balance<min){min=balance;minDate=x.date}if(balance<0&&!firstNegative)firstNegative=x.date;rows.push({x,balance});}
+ if(before===null||after===null)return{error:'Não foi possível identificar o pagamento no fluxo. Nenhum dado foi alterado.'};
+ const enough=before>=cents093(target.amount);
+ const negative=firstNegative!==null;
+ let html=`<p><b>${enough?'Sim, há saldo projetado suficiente para essa conta.':'Não, o saldo projetado é insuficiente para essa conta.'}</b></p>`;
+ html+=`<p>Conta cadastrada: <b>${esc(target.desc)}</b> · ${format093(cents093(target.amount))} · vencimento ${fmt(end)}.</p>`;
+ html+=`<p>Saldo imediatamente antes do pagamento: <b>${format093(before)}</b></p>`;
+ html+=`<p>Saldo imediatamente depois do pagamento: <b class="${after<0?'red':'green'}">${format093(after)}</b></p>`;
+ html+=`<p>Menor saldo até ${fmt(end)}: <b class="${min<0?'red':'green'}">${format093(min)}</b> em ${fmt(minDate)}.</p>`;
+ if(negative)html+=`<div class="notice warning">Atenção: existe falta de caixa em ${fmt(firstNegative)} durante o período analisado${after>=0?', mesmo que o saldo após essa conta seja positivo':''}.</div>`;
+ html+=`<p>Saldo projetado ao final de ${fmt(end)}: <b>${format093(balance)}</b>.</p>`;
+ html+=`<div class="overflow"><table><tr><th>Data</th><th>Movimentação cadastrada</th><th class="right">Saldo</th></tr>${rows.map(r=>`<tr><td>${fmt(r.x.date)}</td><td>${esc(r.x.desc)} (${r.x.type==='receita'?'+':'−'} ${money(r.x.amount)})${r.x.id===target.id?' <b>— conta consultada</b>':''}</td><td class="right">${format093(r.balance)}</td></tr>`).join('')}</table></div>`;
+ html+='<p class="muted">Foram consideradas as contas pendentes cadastradas até o vencimento, inclusive vencidas ainda abertas. Contas já baixadas estão refletidas no saldo de partida. Recebimentos futuros são previsões, não garantias. Nenhuma conta foi duplicada, criada ou modificada.</p>';
+ return{html,detail:{id:target.id,before,after,end,balance,min,firstNegative}};
+}
+ask=function(text){
+ if(typeof text==='object')return priorAsk093(text);
+ const raw=typeof text==='string'?text:document.getElementById('speech').value;
+ const result=query093(raw);
+ if(!result)return priorAsk093(text);
+ document.getElementById('chat').innerHTML='<div class="notice"><b>Você:</b> '+esc(raw)+'</div><div class="notice answer"><b>FalaCaixa v0.9.3:</b> '+(result.error?'<p>'+esc(result.error)+'</p>':result.html)+'</div>';
+ document.getElementById('speech').value='';
+};
+window.FC093={query:query093};
+})();
+</script>
+<script>
+/* v0.9.4: cenário combinado explícito; números que descrevem contas existentes
+   não são convertidos em novas operações. Somente consulta, sem gravação. */
+(function(){
+const previousAsk094=ask;
+const norm094=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const cent094=x=>Math.round(Number(x)*100);
+const brl094=x=>money(x/100);
+const moneyRe094=/r\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/i;
+const dateRe094=/(\d{1,2})\/(\d{1,2})\/(\d{4})/;
+function parseDate094(s){const m=s.match(dateRe094);if(!m)return null;const [d,mo,y]=m.slice(1).map(Number);if(mo<1||mo>12||d<1||d>daysIn(y,mo))throw Error('Data inválida: '+m[0]);return ymd(y,mo,d)}
+function combined094(raw){
+ const n=norm094(raw);
+ if(!/\b(considerando|incluindo|junto com|somando)\b/.test(n)||!/\b(contas cadastradas|contas registradas|lancamentos cadastrados)\b/.test(n))return null;
+ if(!/\b(simular|simulacao|hipotetic[ao]|adicional)\b/.test(n))return null;
+ // Capture the operation without consuming the expense/receipt keyword.
+ const op=n.match(/\b(?:simule|simular|simulacao(?: de)?|simulo|simulando)\s+(?:uma?\s+)?(?:nova\s+)?(despesa|pagamento|compra|gasto|receita|recebimento|entrada)\s*(?:adicional|hipotetic[ao])?\s*(?:de|no valor de)?\s*(r\$\s*[\d.,]+)/)
+       ||n.match(/\b(despesa|pagamento|compra|gasto|receita|recebimento|entrada)\s+(?:adicional|hipotetic[ao])\s*(?:de|no valor de)?\s*(r\$\s*[\d.,]+)/);
+ if(!op)return{error:'Informe uma despesa ou receita hipotética, com valor e data. Ex.: simule uma despesa adicional de R$ 1.500 em 21/10/2026.'};
+ const kind=/^(receita|recebimento|entrada)$/.test(op[1])?'receita':'despesa';
+ const tail=n.slice(op.index);
+ const amt=op[2].match(moneyRe094),date=tail.match(dateRe094);
+ if(!amt||!date)return{error:'Para simular junto às contas cadastradas, informe o valor e a data da movimentação adicional.'};
+ let amount,when,end;
+ try{amount=FC09.cents(amt[1]);when=parseDate094(date[0]);const question=tail.slice(date.index+date[0].length);const qDate=[...question.matchAll(new RegExp(dateRe094.source,'g'))];end=qDate.length?parseDate094(qDate[qDate.length-1][0]):when;}catch(e){return{error:e.message}}
+ if(amount<=0)return{error:'O valor da operação precisa ser positivo.'};
+ if(end<when)return{error:'A data final não pode ser anterior à movimentação adicional.'};
+ const start=today();if(when<start||end<start)return{error:'Informe datas futuras ou atuais para a projeção.'};
+ const events=(state.items||[]).filter(x=>!x.paid&&x.date<=end).map(x=>({date:x.date<start?start:x.date,kind:x.type,amount:cent094(x.amount),desc:x.desc,real:true}));
+ events.push({date:when,kind,amount,desc:'Movimentação hipotética adicional',real:false});
+ // Pagamentos antes de recebimentos no mesmo dia: saldo mínimo conservador.
+ events.sort((a,b)=>a.date.localeCompare(b.date)||((a.kind==='despesa'?0:1)-(b.kind==='despesa'?0:1)));
+ let bal=cent094(current()),min=bal,minDate=start,firstNegative=bal<0?start:null,rows=[];
+ for(const e of events){bal+=(e.kind==='receita'?1:-1)*e.amount;if(bal<min){min=bal;minDate=e.date}if(bal<0&&!firstNegative)firstNegative=e.date;rows.push({e,bal});}
+ let html=`<p><b>${firstNegative?'Atenção: haverá falta de caixa neste cenário.':'Não há saldo negativo neste cenário.'}</b></p>`;
+ html+=`<p>Saldo inicial registrado: <b>${brl094(cent094(current()))}</b>.</p>`;
+ html+=`<p>Movimentação adicional hipotética: <b>${kind==='receita'?'+':'−'} ${brl094(amount)}</b> em ${fmt(when)}.</p>`;
+ html+=`<p>Menor saldo: <b class="${min<0?'red':'green'}">${brl094(min)}</b> em ${fmt(minDate)}.</p>`;
+ if(firstNegative)html+=`<p>Primeiro saldo negativo: <b>${fmt(firstNegative)}</b>.</p>`;
+ html+=`<p>Saldo em ${fmt(end)}: <b class="${bal<0?'red':'green'}">${brl094(bal)}</b>.</p>`;
+ html+=`<div class="overflow"><table><tr><th>Data</th><th>Movimentação</th><th class="right">Saldo</th></tr>${rows.map(({e,bal})=>`<tr><td>${fmt(e.date)}</td><td>${e.real?esc(e.desc):'Simulação adicional'} (${e.kind==='receita'?'+':'−'} ${brl094(e.amount)})</td><td class="right">${brl094(bal)}</td></tr>`).join('')}</table></div>`;
+ html+='<p class="muted">As contas existentes foram consideradas uma vez. Valores citados para descrevê-las não criam novas movimentações. Nenhum lançamento foi gravado ou modificado. Recebimentos pendentes são previsões.</p>';
+ return{html,details:{min,bal,firstNegative,rows:rows.map(r=>({date:r.e.date,amount:r.e.amount,real:r.e.real,balance:r.bal}))}};
+}
+ask=function(text){
+ if(typeof text==='object')return previousAsk094(text);
+ const raw=typeof text==='string'?text:document.getElementById('speech').value;
+ const result=combined094(raw);if(!result)return previousAsk094(text);
+ document.getElementById('chat').innerHTML='<div class="notice"><b>Você:</b> '+esc(raw)+'</div><div class="notice answer"><b>FalaCaixa v0.9.5 — teste:</b> '+(result.error?'<p>'+esc(result.error)+'</p>':result.html)+'</div>';
+ document.getElementById('speech').value='';
+};
+window.FC094={combined:combined094};
+})();
+</script>
+<script>
+/* v0.9.6 — simulador combinado com adiamento de recebimento. Somente leitura. */
+(function(){
+ const previousAsk096=ask;
+ const normalize=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+ const datePattern='\\b(\\d{1,2}\\/\\d{1,2}\\/\\d{4})\\b';
+ const amountPattern='r\\$\\s*(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?)';
+ const toCents=s=>FC09.cents(s);
+ const date=s=>{const [d,m,y]=s.split('/').map(Number);if(y<1900||m<1||m>12||d<1||d>daysIn(y,m))throw Error('Data inválida: '+s);return ymd(y,m,d)};
+ const format=c=>money(c/100);
+ function analyze(raw){
+  const n=normalize(raw);
+  if(!/\b(contas cadastradas|contas registradas|lancamentos cadastrados)\b/.test(n)||!/\b(atraso|atrasar|adiar|adiamento|postergar|postergacao|antecipar|antecipacao)\b/.test(n))return null;
+  if(!/\b(simule|simular|simulacao|hipotetic[ao]|cenario)\b/.test(n))return null;
+  if(/\b(sem considerar|sem utilizar|sem usar)\s+(?:minhas?\s+)?contas cadastradas\b/.test(n))return {error:'O pedido mistura contas cadastradas com cenário independente. Esclareça se deseja incluir as contas.'};
+  try{
+   const balanceMatch=n.match(new RegExp('(?:saldo inicial|saldo de partida)\\s*(?:de|:|e|sera de)?\\s*'+amountPattern))||n.match(new RegExp('(?:um|com|tenho)\\s+saldo inicial\\s*(?:de|:)?\\s*'+amountPattern));
+   if(!balanceMatch)return {error:'Informe o saldo inicial para este cenário. Ex.: saldo inicial de R$ 3.000,00.'};
+   const startBalance=toCents(balanceMatch[1]);
+   const shift=n.match(new RegExp('(?:atraso|atrasar|adiamento|adiar|postergar|antecipacao|antecipar)[\\s\\S]{0,90}?(?:recebimento|receita|entrada)[\\s\\S]{0,50}?'+amountPattern+'[\\s\\S]{0,55}?'+datePattern+'[\\s\\S]{0,35}?(?:para|ate|pro dia|para o dia)\\s*'+datePattern));
+   if(!shift)return {error:'Não identifiquei o recebimento a adiar, o vencimento original e a nova data. Informe os três dados explicitamente.'};
+   const value=toCents(shift[1]),original=date(shift[2]),moved=date(shift[3]);
+   const matches=(state.items||[]).filter(x=>!x.paid&&x.type==='receita'&&x.date===original&&Math.round(x.amount*100)===value);
+   if(matches.length!==1)return {error:matches.length?'Há mais de um recebimento com esse valor e vencimento. Identifique o lançamento com mais detalhes.':'Não encontrei o recebimento pendente com o valor e vencimento informados. Nenhum dado foi alterado.'};
+   const op=n.match(new RegExp('(?:despesa|pagamento|gasto|compra|receita|recebimento|entrada)\\s+(?:adicional\\s+)?(?:hipotetica?\\s+)?(?:de|no valor de)?\\s*'+amountPattern+'\\s*(?:em|no dia|dia)\\s*'+datePattern));
+   if(!op)return {error:'Informe uma movimentação hipotética adicional, com valor e data.'};
+   const opType=/^(receita|recebimento|entrada)/.test(op[0])?'receita':'despesa';
+   const hypothetical={date:date(op[2]),type:opType,amount:toCents(op[1]),desc:'Movimentação hipotética adicional',hypo:true};
+   const ending=n.match(new RegExp('(?:quanto terei em|saldo em|saldo no dia|terei em|ate o dia)\\s*'+datePattern));
+   if(!ending)return {error:'Informe a data final desejada. Ex.: quanto terei em 16/11/2026?'};
+   const end=date(ending[1]),start=today();
+   if(end<start||hypothetical.date<start||moved<start)return {error:'A simulação exige datas atuais ou futuras.'};
+   if(end<hypothetical.date||end<moved)return {error:'A data final precisa incluir as movimentações simuladas.'};
+   const events=(state.items||[]).filter(x=>!x.paid).map(x=>({date:x.id===matches[0].id?moved:x.date,type:x.type,amount:Math.round(x.amount*100),desc:x.desc||'Lançamento cadastrado',shifted:x.id===matches[0].id})).filter(x=>x.date<=end).map(x=>({...x,date:x.date<start?start:x.date}));
+   events.push(hypothetical);
+   events.sort((a,b)=>a.date.localeCompare(b.date)||((a.type==='despesa'?0:1)-(b.type==='despesa'?0:1)));
+   let bal=startBalance,min=bal,minDate=start,firstNegative=bal<0?start:null;
+   const rows=events.map(e=>{bal+=(e.type==='receita'?1:-1)*e.amount;if(bal<min){min=bal;minDate=e.date}if(bal<0&&!firstNegative)firstNegative=e.date;return{...e,balance:bal}});
+   let html=`<p><b>${firstNegative?'Atenção: haverá falta de caixa neste cenário.':'Não há saldo negativo neste cenário.'}</b></p>`;
+   html+=`<p>Saldo inicial informado para a simulação: <b>${format(startBalance)}</b>.</p>`;
+   html+=`<p>Recebimento cadastrado de <b>${format(value)}</b>: vencimento original ${fmt(original)}, considerado hipoteticamente em <b>${fmt(moved)}</b>.</p>`;
+   html+=`<p>Movimentação hipotética adicional: <b>${opType==='receita'?'+':'−'} ${format(hypothetical.amount)}</b> em ${fmt(hypothetical.date)}.</p>`;
+   html+=`<p>Menor saldo: <b class="${min<0?'red':'green'}">${format(min)}</b> em ${fmt(minDate)}.</p>`;
+   if(firstNegative)html+=`<p>Primeiro saldo negativo: <b>${fmt(firstNegative)}</b>.</p>`;
+   html+=`<p>Saldo em ${fmt(end)}: <b>${format(bal)}</b>.</p>`;
+   html+=`<div class="overflow"><table><tr><th>Data</th><th>Movimentação</th><th>Saldo</th></tr>${rows.map(e=>`<tr><td>${fmt(e.date)}</td><td>${esc(e.desc)}${e.shifted?' (data simulada)':''} (${e.type==='receita'?'+':'−'} ${format(e.amount)})</td><td>${format(e.balance)}</td></tr>`).join('')}</table></div>`;
+   html+='<p class="muted">Cenário combinado. O saldo inicial informado substitui o saldo registrado apenas nesta projeção. O vencimento original e os lançamentos permanecem inalterados. Recebimentos pendentes são previsões.</p>';
+   return{html,detail:{startBalance,min,minDate,firstNegative,endBalance:bal,rows}};
+  }catch(e){return{error:e.message||'Não foi possível interpretar o cenário.'}}
+ }
+ ask=function(text){
+  if(typeof text==='object')return previousAsk096(text);
+  const raw=typeof text==='string'?text:document.getElementById('speech').value;
+  const result=analyze(raw);if(!result)return previousAsk096(text);
+  document.getElementById('chat').innerHTML='<div class="notice"><b>Você:</b> '+esc(raw)+'</div><div class="notice answer"><b>FalaCaixa v0.9.6 — teste:</b> '+(result.error?'<p>'+esc(result.error)+'</p>':result.html)+'</div>';
+  document.getElementById('speech').value='';
+ };
+ window.FC096={analyze};
+})();
+
+</script>
+</body></html>
